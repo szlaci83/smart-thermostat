@@ -11,7 +11,7 @@ to serv as an intelligent thermostat and control heating system accordingly thro
   The device can be controlled through IOT server (to be implemented) 
  
   
-#Possible improvements :
+# Possible improvements :
  - weather forecast using openweather API
  - holiday function (using forecast + historycal info to calculate heat up time)
  - add wireless capability
