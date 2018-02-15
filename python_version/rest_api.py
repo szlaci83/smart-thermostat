@@ -1,5 +1,7 @@
+#!/usr/bin/env python
 from flask import Flask, jsonify, request, Response, make_response,  current_app
 from flask_cors import CORS
+import orangepi_controller as controller
 
 app = Flask(__name__)
 CORS(app)
@@ -18,9 +20,13 @@ def switch():
         response = jsonify({"error" : "Bad request", "code": "400", "message" : "No state or bad format."}, 400)
         make_response(response)
         return response
-    currency = request.json['state']
+    state = request.json['state']
+    if state == "on":
+        controller.turn_led_on()
+    else:
+        controller.turn_led_off()
 
-    response = jsonify(currency, 200)
+    response = jsonify(state, 200)
     response = make_response(response)
     response.headers['Access-Control-Allow-Origin'] = "*"
     response.headers['content-type'] = "application/json"
