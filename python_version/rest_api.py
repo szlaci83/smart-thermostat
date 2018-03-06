@@ -21,10 +21,11 @@ def switch():
         make_response(response)
         return response
     state = request.json['state']
-    if state == "on":
-        controller.turn_led_on()
-    else:
-        controller.turn_led_off()
+   # if state == "on":
+       # controller.turn_led_on()
+	
+   # else:
+      #  controller.turn_led_off()
 
     response = jsonify(state, 200)
     response = make_response(response)
