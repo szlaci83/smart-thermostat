@@ -19,10 +19,6 @@ class DecimalEncoder(json.JSONEncoder):
         return super(DecimalEncoder, self).default(o)
 
 
-dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('temp_test')
-
-
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
     client.subscribe("topic/temperature")
