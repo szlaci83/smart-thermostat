@@ -1,4 +1,4 @@
 .idea
-python_version/mqtt/venv
+venv
 python_version/mqtt/__pycache__
 python_version/mqtt/credentials.py
