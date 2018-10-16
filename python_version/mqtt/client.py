@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
 import time
+import json
 from random import *
 import paho.mqtt.publish as publish
-import json
-
+from python_version.mqtt.settings import *
 
 
 '''
@@ -12,15 +12,14 @@ import json
 '''
 
 client = mqtt.Client()
-#client.connect("localhost", 1883, 60)
 
 data = {
-    'client_id': 1
+    'client_id': 444,
+    'location': 'living_room'
 }
 
 while True:
     data['temp'] = randint(1, 24)
     data['humidity'] = randint(1, 99)
-    publish.single(payload=json.dumps(data), topic="topic/temperature", hostname="localhost", client_id="112")
-    #client.publish("topic/temperature", temp, )
+    publish.single(payload=json.dumps(data), topic=TOPIC, hostname=CLIENT_HOST)
     time.sleep(randint(1, 10))

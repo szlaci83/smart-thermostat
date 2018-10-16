@@ -1,7 +1,13 @@
+'''
+Mock DB using file output.
+'''
+from python_version.mqtt.settings import *
+
 class DatabaseManager:
-    def put(self, data):
+    @staticmethod
+    def put(data):
         print("FILE" + str(data))
-        with open('db.csv', 'w+') as file:
+        with open(MOCK_FILE, 'w+') as file:
             item={
                 'device_id': data["client_id"],
                 'date': data['timestamp'],
@@ -14,12 +20,10 @@ class DatabaseManager:
 
 def example():
     db = DatabaseManager()
-    response = db.put(data={
-        'client_id': 11,
-        'timestamp': '111',
-        'temp': 0,
-        'humidity': 0,
-    })
+    db.put(data={'client_id': 11,
+                 'timestamp': '111',
+                 'temp': 0,
+                 'humidity': 0})
 
     print("PutItem succeeded:")
 
@@ -27,6 +31,7 @@ def example():
 def handle(data):
     db = DatabaseManager()
     db.put(data=data)
+
 
 if __name__ == '__main__':
     example()
