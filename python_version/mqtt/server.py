@@ -5,6 +5,7 @@ from multiprocessing import Pool, Queue, cpu_count
 import threading
 from python_version.mqtt.db import *
 from python_version.mqtt.settings import *
+from python_version.mqtt.timer import timer_worker
 
 
 def on_connect(client, userdata, flags, rc):
@@ -43,6 +44,9 @@ if __name__ == '__main__':
 
     db_thread = threading.Thread(target=db_worker)
     db_thread.start()
+
+    timer_thread = threading.Thread(target=timer_worker)
+    timer_thread.start()
 
     client.loop_forever()
 

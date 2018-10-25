@@ -21,21 +21,3 @@ HEATING = False
 THRESHOLD = 0.8
 
 CURRENT_TEMP = 22
-
-DAYS = ['Monday', 'Tuesday', "Wednesday", 'Thursday', "Friday", "Saturday", "Sunday"]
-
-HEATING_SETTINGS = {"Tuesday": [{'start_hour': 6,
-                         'start_min': 0,
-                         'end_hour': 23,
-                         'end_min': 30,
-                         'desired_temp': 24},
-
-                                {'start_hour': 23,
-                         'start_min': 31,
-                         'end_hour': 23,
-                         'end_min': 59,
-                         'desired_temp': 20
-                        }]
-                    }
-
-

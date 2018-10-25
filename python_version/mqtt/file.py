@@ -3,6 +3,7 @@ Mock DB using file output.
 '''
 from python_version.mqtt.settings import *
 
+
 class DatabaseManager:
     @staticmethod
     def put(data):

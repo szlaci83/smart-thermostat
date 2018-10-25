@@ -1,34 +1,33 @@
 import boto3
 import decimal
 import json
-from boto3.dynamodb.conditions import Key, Attr
-from botocore.exceptions import ClientError
-import time
+from boto3.dynamodb.conditions import Key
+from python_version.mqtt.settings import *
 
 
 class DatabaseManager:
     def __init__(self):
         self.dynamodb = boto3.resource('dynamodb')
-        self.table = self.dynamodb.Table('temp_test')
+        self.table = self.dynamodb.Table(TABLE_NAME)
 
     # Returns True if put was successful
     def put(self, data):
         response = self.table.put_item(
             Item={
                 'device_id': data["client_id"],
-                'date': str(data['timestamp']),
+                'date': str(data['epoch']),
                 'temp': data['temp'],
                 'humidity': data['humidity'],
             }
         )
-        return response['ResponseMetadata']['HTTPStatusCode'] == 200
+        return response['ResponseMetadata']['HTTPStatusCode'] == HTTP_OK
 
     def add_del_update_db_record(self, sql_query, args=()):
         self.cur.execute(sql_query, args)
         self.conn.commit()
         return
 
-    def get(self, id):
+    def get_by_id(self, id):
         response = self.table.query(
             KeyConditionExpression=Key('device_id').eq(id))
         return response
@@ -55,7 +54,7 @@ def example():
     })
     print("PutItem succeeded: " + str(response))
 
-    response = db.get(11)
+    response = db.get_by_id(11)
     for i in response['Items']:
         print(i['date'], ":", i['temp'], ":", i['humidity'])
 
