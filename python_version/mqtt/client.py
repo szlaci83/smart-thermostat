@@ -1,27 +1,38 @@
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
+import paho.mqtt.publish as publish
+from pyA20.gpio import gpio
+from pyA20.gpio import port
+#import RPi.GPIO as GPIO
+import dht22
 import time
 import json
-from pprint import pprint
-from random import *
-import paho.mqtt.publish as publish
+
 from python_version.mqtt.settings import *
 
+# https://github.com/ionutpi/DHT22-Python-library-Orange-PI/blob/master/README.md
 
-'''
- Simulation of an IOT device publishing data randomly on MQTT protocol
-'''
+# initialize GPIO
+#gpio.setwarnings(False)
+#gpio.setmode(GPIO.BCM)
+PIN2 = port.PA6
+gpio.init()
+#gpio.cleanup()
+
+# read data using pin 14
+instance = dht22.DHT22(pin=PIN2)
 
 client = mqtt.Client()
 
 data = {
-    'client_id': 464,
-    'location': 'living_room'
+    'client_id': 1,
+    'location': 'master_bedroom'
 }
 
 while True:
-    data['temp'] = randint(20, 28)
-    data['humidity'] = randint(1, 99)
-    pprint(data)
+    result = instance.read()
+    data['temp'] = result.temperature
+    data['humidity'] = result.humidity
+    #pprint(data)
     publish.single(payload=json.dumps(data), topic=TOPIC, hostname=CLIENT_HOST)
-    time.sleep(randint(1, 10))
+    time.sleep(5)
