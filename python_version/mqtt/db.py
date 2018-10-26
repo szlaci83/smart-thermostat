@@ -4,7 +4,6 @@ import json
 from boto3.dynamodb.conditions import Key
 from python_version.mqtt.settings import *
 
-
 class DatabaseManager:
     def __init__(self):
         self.dynamodb = boto3.resource('dynamodb')
@@ -12,12 +11,14 @@ class DatabaseManager:
 
     # Returns True if put was successful
     def put(self, data):
+    # TODO: store location in DB as well (String)
+    # TODO: store HEATING value in DB as well (boolean)
         response = self.table.put_item(
             Item={
                 'device_id': data["client_id"],
                 'date': str(data['epoch']),
                 'temp': data['temp'],
-                'humidity': data['humidity'],
+                'humidity': data['humidity']
             }
         )
         return response['ResponseMetadata']['HTTPStatusCode'] == HTTP_OK
