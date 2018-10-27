@@ -5,10 +5,10 @@ import datetime
 from multiprocessing import Queue
 import threading
 
-from python_version.mqtt.db import *
-from python_version.mqtt.settings import *
-from python_version.mqtt.timer_settings import TIMER_SETTINGS
-import python_version.mqtt.mock_relay as HEATING_RELAY
+from db import *
+from settings import *
+from timer_settings import TIMER_SETTINGS
+import mock_relay as HEATING_RELAY
 
 
 global HEATING
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     current_humidity = 0
 
     db = DatabaseManager()
-    q = Queue()
+    #q = Queue()
     client = mqtt.Client()
     client.connect(SERVER_HOST, SERVER_PORT, SERVER_TIMEOUT)
 

@@ -5,7 +5,7 @@ import time
 import json
 from pprint import pprint
 from random import *
-from python_version.mqtt.settings import *
+from settings import *
 
 
 '''

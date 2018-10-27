@@ -1,7 +1,7 @@
 '''
 Mock DB using file output.
 '''
-from python_version.mqtt.settings import *
+from settings import *
 
 
 class DatabaseManager:

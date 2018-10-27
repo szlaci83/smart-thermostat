@@ -2,7 +2,7 @@ import boto3
 import decimal
 import json
 from boto3.dynamodb.conditions import Key
-from python_version.mqtt.settings import *
+from settings import *
 
 class DatabaseManager:
     def __init__(self):

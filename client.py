@@ -8,7 +8,7 @@ import dht22
 import time
 import json
 
-from python_version.mqtt.settings import *
+from settings import *
 
 # https://github.com/ionutpi/DHT22-Python-library-Orange-PI/blob/master/README.md
 
