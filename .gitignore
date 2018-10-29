@@ -2,5 +2,5 @@ __pycache__/
 .idea
 .idea/
 venv
-python_version/mqtt/__pycache__
-python_version/mqtt/credentials.py
+__pycache__
+credentials.py
