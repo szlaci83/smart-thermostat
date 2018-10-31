@@ -13,6 +13,7 @@ TOPIC = "topic/temperature"
 # DB
 TABLE_NAME = 'temp_test'
 MOCK_FILE = 'db.csv'
+HEATING_SETTINGS = 'timer.pickle'
 
 HTTP_OK = 200
 

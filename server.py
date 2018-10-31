@@ -4,6 +4,7 @@ import time
 import datetime
 import requests
 import collections
+import pickle
 from pprint import pprint
 
 from multiprocessing import Queue
@@ -12,7 +13,8 @@ import threading
 from db import *
 from settings import *
 from credentials import *
-from timer_settings import TIMER_SETTINGS
+#from timer_settings import TIMER_SETTINGS
+
 import mock_relay as HEATING_RELAY
 
 db = DatabaseManager()
@@ -32,6 +34,20 @@ banner = "____ _  _ ____ ____ ___    ___ _  _ ____ ____ _  _ ____ ____ ___ ____ 
          "___] |  | |  | |  \  |      |  |  | |___ |  \ |  | |__| ___]  |  |  |  |  0.1\n"
 
 tolerance = 1
+
+TIMER_SETTINGS = {}
+
+
+def load_heating_settings(setting_file=HEATING_SETTINGS):
+    global TIMER_SETTINGS
+    with open(setting_file, 'rb') as handle:
+        TIMER_SETTINGS = pickle.load(handle)
+
+
+def save_heating_settings(it=TIMER_SETTINGS, filename=HEATING_SETTINGS):
+    with open(filename + '.pickle', 'wb') as file:
+        pickle.dump(it,  file, protocol=pickle.HIGHEST_PROTOCOL)
+    return
 
 
 def normalise_list(values_list):
@@ -123,6 +139,8 @@ def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
         print("Wrong day")
     except IndexError:
         print("wrong minute or hour,min has to be: 0, 15, 30, 45 hour 0-23")
+    save_heating_settings()
+    return
 
 
 def db_worker():
@@ -157,6 +175,7 @@ def db_worker():
 def run():
     print(banner)
 
+    load_heating_settings()
     client = mqtt.Client()
     client.connect(SERVER_HOST, SERVER_PORT, SERVER_TIMEOUT)
 
