@@ -20,3 +20,5 @@ HTTP_OK = 200
 HEATING = False
 THRESHOLD = 0.8
 
+WEATHER_QUERY = "http://api.openweathermap.org/data/2.5/weather?units=metric&id=%s&APPID=%s"
+JSON_HEADER = {'content-type': 'application/json'}

@@ -16,7 +16,7 @@ client = mqtt.Client()
 
 data = {
     'client_id': 464,
-    'location': 'mock_unit'
+    'location': 'mock_location1'
 }
 
 while True:
