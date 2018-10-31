@@ -3,6 +3,7 @@ from flask_cors import CORS
 import time
 from utils import add_headers, validate_req
 from errors import *
+from settings import FORCE_ON_DEFAULT
 import threading
 from timer_settings import TIMER_SETTINGS
 
@@ -57,6 +58,14 @@ def post_settings():
                           setting['end_min'],
                           setting['desired_temp'])
     return add_headers(True, 200)
+
+
+@app.route("/switch-heating", methods=['POST'])
+def switch_heating():
+    heating = False if "off" in request.json and request.json["off"] is True else True
+    force_minutes = FORCE_ON_DEFAULT if "minutes" not in request.json else request.json['minutes']
+    server.forcer(heating, period=force_minutes)
+    return add_headers("Forcing heating %s for %d minute(s)" % (heating, force_minutes), 200)
 
 
 if __name__ == '__main__':

@@ -13,7 +13,6 @@ import threading
 from db import *
 from settings import *
 from credentials import *
-#from timer_settings import TIMER_SETTINGS
 
 import mock_relay as HEATING_RELAY
 
@@ -25,6 +24,8 @@ temperatures = {}
 
 weather_data = {}
 HEATING = False
+FORCE_HEATING = False
+FORCE_NOT_HEATING = False
 current_humidity = 0
 current_temperature = 0
 current_target_temperature = 0
@@ -96,6 +97,21 @@ def timer_worker():
         time.sleep(1)
 
 
+def force_worker(on, period):
+    global FORCE_HEATING
+    global FORCE_NOT_HEATING
+    FORCE_HEATING = True if on else False
+    FORCE_NOT_HEATING = not FORCE_HEATING
+    time.sleep(period * 60)
+    FORCE_HEATING = False
+    FORCE_NOT_HEATING = False
+
+
+def forcer(on, period):
+    weather_thread = threading.Thread(target=force_worker, args=[on, period])
+    weather_thread.start()
+
+
 def apply_setting():
     global HEATING
     global current_humidity
@@ -118,6 +134,11 @@ def apply_setting():
             if HEATING:
                 HEATING = False
                 print("HEATING: %d" % HEATING)
+    # FORCE overrides all of the above
+    if FORCE_HEATING:
+        HEATING = True
+    if FORCE_NOT_HEATING:
+        HEATING = False
     (HEATING_RELAY.on(), HEATING_RELAY.turn_led_on()) if HEATING \
         else (HEATING_RELAY.off(), HEATING_RELAY.turn_led_off())
 
@@ -170,7 +191,8 @@ def db_worker():
             print(normalise_dict(temperatures))
             print(normalise_dict(humidities))
             results['heating'] = HEATING
-            db.put(results)
+            # NOT USING IT FOR DEV
+            #db.put(results)
 
 
 def run():
