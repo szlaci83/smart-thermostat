@@ -44,8 +44,8 @@ def load_heating_settings(setting_file=HEATING_SETTINGS):
         TIMER_SETTINGS = pickle.load(handle)
 
 
-def save_heating_settings(it=TIMER_SETTINGS, filename=HEATING_SETTINGS):
-    with open(filename + '.pickle', 'wb') as file:
+def save_heating_settings(it, filename=HEATING_SETTINGS):
+    with open(filename, 'wb') as file:
         pickle.dump(it,  file, protocol=pickle.HIGHEST_PROTOCOL)
     return
 
@@ -124,6 +124,7 @@ def apply_setting():
 
 # ("Monday", 10, 0, 11, 45, 24)
 def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
+    global TIMER_SETTINGS
     hour = start_hour
     minute = start_min
     try:
@@ -139,7 +140,7 @@ def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
         print("Wrong day")
     except IndexError:
         print("wrong minute or hour,min has to be: 0, 15, 30, 45 hour 0-23")
-    save_heating_settings()
+    save_heating_settings(it=TIMER_SETTINGS)
     return
 
 
