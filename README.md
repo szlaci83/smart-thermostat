@@ -1,4 +1,4 @@
-New version is based on MQTT protocol using OrangePI PC and arduino boards.
+The newest version is based on MQTT protocol using OrangePI PC and arduino boards.
 OrangePI is the server, responsible for:
  - collecting data from its temperature sensor, and MQTT enabled (dumb) remote arduino sensors
  - aggregating and recording data (temperature, humidity, heating) to AWS Dynamo DB
