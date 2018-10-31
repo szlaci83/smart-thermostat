@@ -1,6 +1,7 @@
 __pycache__/
 .idea
 .idea/
+.idea/workspace.xml
 venv
 __pycache__
 credentials.py
