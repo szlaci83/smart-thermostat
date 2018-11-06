@@ -1,13 +1,15 @@
+import logging
+import threading
+import time
+
 from flask import Flask, request
 from flask_cors import CORS
-import time
-from utils import add_headers, validate_req
-from errors import *
-from settings import FORCE_ON_DEFAULT
-import threading
-from timer_settings import TIMER_SETTINGS
 
 import server
+from errors import *
+from settings import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL
+from timer_settings import TIMER_SETTINGS
+from utils import add_headers, validate_req
 
 app = Flask(__name__)
 CORS(app)
@@ -15,6 +17,8 @@ CORS(app)
 
 @app.route("/status", methods=['GET'])
 def get_status():
+    logging.info(request.args)
+    logging.debug(request)
     status = {'epoch': str(time.time()),
               'outside_temp': server.weather_data['main']['temp'],
               'outside_humidity': server.weather_data['main']['humidity'],
@@ -22,11 +26,14 @@ def get_status():
               'humidity': server.normalise_dict(server.humidities),
               'temp': server.normalise_dict(server.temperatures),
               'target_temp': server.current_target_temperature}
+    logging.info(status)
     return add_headers(status, 200)
 
 
 @app.route("/settings", methods=['GET'])
 def get_settings():
+    logging.info(request.args)
+    logging.debug(request)
     day = request.args.get('day')
     hour = request.args.get('hour')
     minute = request.args.get('minute')
@@ -38,17 +45,23 @@ def get_settings():
             result = result[int(hour)]
         if minute:
             result = result[int(int(minute) / 15)]
+        logging.info(result)
         return add_headers(result, 200)
     except KeyError:
+        logging.error(DAY_ERROR)
         return add_headers(DAY_ERROR, DAY_ERROR['code'])
     except IndexError:
+        logging.error(TIME_ERROR)
         return add_headers(TIME_ERROR, TIME_ERROR['code'])
 
 
 @app.route("/settings", methods=['POST'])
 def post_settings():
+    logging.info(request.args)
+    logging.debug(request)
     fields = ['day', 'start_hour', 'start_min', 'end_hour', 'end_min', 'desired_temp']
     if not validate_req(request, fields):
+        logging.error(JSON_ERROR)
         return add_headers(JSON_ERROR, JSON_ERROR['code'])
     setting = request.json
     server.change_setting(setting['day'],
@@ -62,15 +75,25 @@ def post_settings():
 
 @app.route("/switch-heating", methods=['POST'])
 def switch_heating():
+    logging.info(request.args)
+    logging.debug(request)
     heating = False if "off" in request.json and request.json["off"] is True else True
     force_minutes = FORCE_ON_DEFAULT if "minutes" not in request.json else request.json['minutes']
     server.forcer(heating, period=force_minutes)
-    return add_headers("Forcing heating %s for %d minute(s)" % (heating, force_minutes), 200)
+    result = "Forcing heating: %s for %d minute(s)" % (heating, force_minutes)
+    logging.debug(result)
+    return add_headers(result, 200)
 
 
 if __name__ == '__main__':
+    if SERVER_LOG and SERVER_LOG != '':
+        print("Server started see %s for details!" % SERVER_LOG)
+        print("MQTT port: %d" % SERVER_MQTT_PORT)
+        print("REST API port: %d" % SERVER_REST_PORT)
+    logging.basicConfig(filename=SERVER_LOG, level=LOGGING_LEVEL, format="%(asctime)s:%(levelname)s:%(message)s")
+
     server_thread = threading.Thread(target=server.run)
     server_thread.start()
 
-    app.run(host='0.0.0.0')
+    app.run(host=SERVER_HOST, port=SERVER_REST_PORT)
 

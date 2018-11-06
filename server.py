@@ -15,27 +15,19 @@ from settings import *
 from credentials import *
 
 import mock_relay as HEATING_RELAY
+import logging
 
-db = DatabaseManager()
-q = Queue()
-
-humidities = {}
-temperatures = {}
-
-weather_data = {}
-HEATING = False
-FORCE_HEATING = False
-FORCE_NOT_HEATING = False
 current_humidity = 0
 current_temperature = 0
 current_target_temperature = 0
-
-banner = "____ _  _ ____ ____ ___    ___ _  _ ____ ____ _  _ ____ ____ ___ ____ ___    \n" \
-         "[__  |\/| |__| |__/  |  __  |  |__| |___ |__/ |\/| |  | [__   |  |__|  |     \n" \
-         "___] |  | |  | |  \  |      |  |  | |___ |  \ |  | |__| ___]  |  |  |  |  0.1\n"
-
-tolerance = 1
-
+q = Queue()
+HEATING = False
+FORCE_HEATING = False
+FORCE_NOT_HEATING = False
+db = DatabaseManager()
+humidities = {}
+temperatures = {}
+weather_data = {}
 TIMER_SETTINGS = {}
 
 
@@ -43,23 +35,24 @@ def load_heating_settings(setting_file=HEATING_SETTINGS):
     global TIMER_SETTINGS
     with open(setting_file, 'rb') as handle:
         TIMER_SETTINGS = pickle.load(handle)
+    logging.info("heating settings loaded from %s" % setting_file)
 
 
-def save_heating_settings(it, filename=HEATING_SETTINGS):
-    with open(filename, 'wb') as file:
+def save_heating_settings(it, setting_file=HEATING_SETTINGS):
+    with open(setting_file, 'wb') as file:
         pickle.dump(it,  file, protocol=pickle.HIGHEST_PROTOCOL)
+    logging.info("heating settings saved to %s" % setting_file)
     return
 
 
 def normalise_list(values_list):
     # smoothing outliers (ignore readings outside tolerance)
-    if abs(values_list[0] - values_list[1]) > tolerance and abs(values_list[1] - values_list[2]) > tolerance:
+    if abs(values_list[0] - values_list[1]) > TOLERANCE and abs(values_list[1] - values_list[2]) > TOLERANCE:
         values_list[1] = values_list[0]
     return sum(values_list) / 5
 
 
 def normalise_dict(target_dict):
-    print(type(target_dict))
     norm_dict = {}
     for k, v in target_dict.items():
         norm_dict[k] = normalise_list(v)
@@ -67,8 +60,9 @@ def normalise_dict(target_dict):
 
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code " + str(rc))
+    logging.debug("Connected with result code %d" %rc)
     client.subscribe(TOPIC)
+    logging.debug("Subscribed to topic %s" % TOPIC)
 
 
 def on_message(client, userdata, msg):
@@ -77,13 +71,20 @@ def on_message(client, userdata, msg):
         data['epoch'] = str(time.time())
         q.put(data)
     except Exception as e:
-        print(e)
+        logging.error(e)
+    logging.debug("received data: %s" % str(data))
+    # TODO: remove print
     print(data)
 
 
 def weather_worker():
     global weather_data
-    weather_data = requests.get(WEATHER_QUERY % (str(CITY_ID), API_KEY), headers=JSON_HEADER).json()
+    query = WEATHER_QUERY % (str(CITY_ID), API_KEY)
+    try:
+        weather_data = requests.get(query, headers=JSON_HEADER).json()
+    except:
+        logging.error("Could not get data from %s" % query)
+    # TODO: remove prints
     print(weather_data['main']['temp'])
     print(weather_data['main']['humidity'])
     pprint(weather_data)
@@ -120,8 +121,6 @@ def apply_setting():
     print("CURRENT: " + str(current_temperature))
     now = datetime.datetime.now()
 
-    # TODO: add settings to desired temp for timeslots
-
     desired_temp = TIMER_SETTINGS[now.strftime("%A")][now.hour][int(now.minute / 15)]
 
     print("DESIRED_TEMP: %d" % desired_temp)
@@ -152,14 +151,16 @@ def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
         while True:
             if minute == 60:
                 minute = 0
-                hour = hour + 1
+                hour += 1
             TIMER_SETTINGS[day][hour][int(minute / 15)] = desired_temp
             minute += 15
             if hour == end_hour and minute == end_min:
                 break
     except KeyError:
+        logging.error("Wrong day: %s" % day)
         print("Wrong day")
     except IndexError:
+        logging.error("Wrong hour or minute: h: %d, min: %d, h:%d, min: %d" % (start_hour, start_min, end_hour, end_min))
         print("wrong minute or hour,min has to be: 0, 15, 30, 45 hour 0-23")
     save_heating_settings(it=TIMER_SETTINGS)
     return
@@ -185,22 +186,21 @@ def db_worker():
             except KeyError:
                 temperatures[results['location']] = collections.deque(5 * [results['temp']], 5)
             print(temperatures)
+            # TODO: only record if its changed
             current_humidity = results['humidity']
             current_temperature = results['temp']
 
             print(normalise_dict(temperatures))
             print(normalise_dict(humidities))
             results['heating'] = HEATING
-            # NOT USING IT FOR DEV
-            #db.put(results)
+            if not DEV:
+                db.put(results)
 
 
 def run():
-    print(banner)
-
     load_heating_settings()
     client = mqtt.Client()
-    client.connect(SERVER_HOST, SERVER_PORT, SERVER_TIMEOUT)
+    client.connect(SERVER_HOST, SERVER_MQTT_PORT, SERVER_TIMEOUT)
 
     client.on_connect = on_connect
     client.on_message = on_message
@@ -218,4 +218,9 @@ def run():
 
 
 if __name__ == '__main__':
+    print(BANNER)
+    if SERVER_LOG and SERVER_LOG != '':
+        print("Server started see %s for details!" % SERVER_LOG)
+        print("MQTT port: %d" % SERVER_MQTT_PORT)
+    logging.basicConfig(filename=SERVER_LOG, level=LOGGING_LEVEL, format="%(asctime)s:%(levelname)s:%(message)s")
     run()
