@@ -6,6 +6,7 @@ import requests
 import collections
 import pickle
 from pprint import pprint
+from enum import Enum
 
 from multiprocessing import Queue
 import threading
@@ -17,13 +18,19 @@ from credentials import *
 import mock_relay as HEATING_RELAY
 import logging
 
+
+class ForceHeating(Enum):
+    ON = True
+    OFF = False
+    UNSET = None
+
+
 current_humidity = 0
 current_temperature = 0
 current_target_temperature = 0
 
 HEATING = False
-FORCE_HEATING = False
-FORCE_NOT_HEATING = False
+FORCE_HEATING = ForceHeating.UNSET
 
 q = Queue()
 db = DatabaseManager()
@@ -32,6 +39,8 @@ humidities = {}
 temperatures = {}
 weather_data = {}
 TIMER_SETTINGS = {}
+
+
 
 
 def load_heating_settings_from_file(setting_file=HEATING_SETTINGS):
@@ -115,13 +124,12 @@ def timer_worker():
 
 
 def force_worker(on, period):
+    logging.debug("Forcing %s for %s minutes." % (str(on), period))
     global FORCE_HEATING
-    global FORCE_NOT_HEATING
-    FORCE_HEATING = True if on else False
-    FORCE_NOT_HEATING = not FORCE_HEATING
+    FORCE_HEATING = ForceHeating.ON if on else ForceHeating.OFF
     time.sleep(period * 60)
-    FORCE_HEATING = False
-    FORCE_NOT_HEATING = False
+    logging.debug("Force over")
+    FORCE_HEATING = ForceHeating.UNSET
 
 
 def forced_switch(on, period):
@@ -139,22 +147,20 @@ def apply_setting():
 
     desired_temp = TIMER_SETTINGS[now.strftime("%A")][now.hour][int(now.minute / 15)]
     logging.debug("desired temperature: %d" % desired_temp)
-    if current_temperature <= desired_temp - THRESHOLD:
-        if not HEATING:
-            HEATING = True
-            logging.debug("HEATING: %s" % str(HEATING))
+    if FORCE_HEATING.value is not None:
+        HEATING = FORCE_HEATING.value
     else:
-        if current_temperature >= desired_temp + THRESHOLD:
-            if HEATING:
-                HEATING = False
+        if current_temperature <= desired_temp - THRESHOLD:
+            if not HEATING:
+                HEATING = True
                 logging.debug("HEATING: %s" % str(HEATING))
-    # FORCE overrides all of the above
-    if FORCE_HEATING:
-        HEATING = True
-    if FORCE_NOT_HEATING:
-        HEATING = False
-    (HEATING_RELAY.on(), HEATING_RELAY.turn_led_on()) if HEATING \
-        else (HEATING_RELAY.off(), HEATING_RELAY.turn_led_off())
+        else:
+            if current_temperature >= desired_temp + THRESHOLD:
+                if HEATING:
+                    HEATING = False
+                    logging.debug("HEATING: %s" % str(HEATING))
+
+    HEATING_RELAY.on(led=True) if HEATING else HEATING_RELAY.off(led=True)
 
 
 # ("Monday", 10, 0, 11, 45, 24)
