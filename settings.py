@@ -17,9 +17,9 @@ CLIENT_TIMEOUT = 60
 
 # Logging
 CLIENT_LOGS = "logs/client.log"
-SERVER_LOG = "logs/server.log"
+#SERVER_LOG = "logs/server.log"
 LOGGING_LEVEL = logging.DEBUG
-
+SERVER_LOG = ""
 
 TOPIC = "topic/temperature"
 

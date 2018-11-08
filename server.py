@@ -20,29 +20,48 @@ import logging
 current_humidity = 0
 current_temperature = 0
 current_target_temperature = 0
-q = Queue()
+
 HEATING = False
 FORCE_HEATING = False
 FORCE_NOT_HEATING = False
+
+q = Queue()
 db = DatabaseManager()
+
 humidities = {}
 temperatures = {}
 weather_data = {}
 TIMER_SETTINGS = {}
 
 
-def load_heating_settings(setting_file=HEATING_SETTINGS):
+def load_heating_settings_from_file(setting_file=HEATING_SETTINGS):
     global TIMER_SETTINGS
-    with open(setting_file, 'rb') as handle:
-        TIMER_SETTINGS = pickle.load(handle)
+    try:
+        with open(setting_file, 'rb') as handle:
+            TIMER_SETTINGS = pickle.load(handle)
+    except FileNotFoundError or IOError:
+        logging.error("error while loading timer settings from: %s" % setting_file)
+        load_default_heating_settings()
     logging.info("heating settings loaded from %s" % setting_file)
 
 
+def load_default_heating_settings():
+    logging.info("fallback to default settings")
+    global TIMER_SETTINGS
+    try:
+        from timer_settings import DEFAULT_TIMER_SETTINGS
+        TIMER_SETTINGS = DEFAULT_TIMER_SETTINGS
+    except ImportError:
+        logging.error("couldn't import timer_settings module, can't load default timer settings")
+
+
 def save_heating_settings(it, setting_file=HEATING_SETTINGS):
-    with open(setting_file, 'wb') as file:
-        pickle.dump(it,  file, protocol=pickle.HIGHEST_PROTOCOL)
+    try:
+        with open(setting_file, 'wb') as file:
+            pickle.dump(it,  file, protocol=pickle.HIGHEST_PROTOCOL)
+    except FileNotFoundError or IOError:
+        logging.error("error while saving timer settings to: %s" % setting_file)
     logging.info("heating settings saved to %s" % setting_file)
-    return
 
 
 def normalise_list(values_list):
@@ -73,8 +92,6 @@ def on_message(client, userdata, msg):
     except Exception as e:
         logging.error(e)
     logging.debug("received data: %s" % str(data))
-    # TODO: remove print
-    print(data)
 
 
 def weather_worker():
@@ -84,12 +101,11 @@ def weather_worker():
         weather_data = requests.get(query, headers=JSON_HEADER).json()
     except:
         logging.error("Could not get data from %s" % query)
-    # TODO: remove prints
-    print(weather_data['main']['temp'])
-    print(weather_data['main']['humidity'])
-    pprint(weather_data)
+    logging.debug("WeatherAPI temp: %d" % weather_data['main']['temp'])
+    logging.debug("WeatherAPI humidity: %d" % weather_data['main']['humidity'])
+    #pprint(weather_data)
     # enough sleep for free tier usage
-    time.sleep(11 * 60)
+    time.sleep(10 * 60 + 1)
 
 
 def timer_worker():
@@ -108,7 +124,7 @@ def force_worker(on, period):
     FORCE_NOT_HEATING = False
 
 
-def forcer(on, period):
+def forced_switch(on, period):
     weather_thread = threading.Thread(target=force_worker, args=[on, period])
     weather_thread.start()
 
@@ -118,21 +134,20 @@ def apply_setting():
     global current_humidity
     global current_temperature
     global current_target_temperature
-    print("CURRENT: " + str(current_temperature))
+    logging.debug("current temperature: %d" % current_temperature)
     now = datetime.datetime.now()
 
     desired_temp = TIMER_SETTINGS[now.strftime("%A")][now.hour][int(now.minute / 15)]
-
-    print("DESIRED_TEMP: %d" % desired_temp)
+    logging.debug("desired temperature: %d" % desired_temp)
     if current_temperature <= desired_temp - THRESHOLD:
         if not HEATING:
             HEATING = True
-            print("HEATING: %d" % HEATING)
+            logging.debug("HEATING: %s" % str(HEATING))
     else:
         if current_temperature >= desired_temp + THRESHOLD:
             if HEATING:
                 HEATING = False
-                print("HEATING: %d" % HEATING)
+                logging.debug("HEATING: %s" % str(HEATING))
     # FORCE overrides all of the above
     if FORCE_HEATING:
         HEATING = True
@@ -144,6 +159,7 @@ def apply_setting():
 
 # ("Monday", 10, 0, 11, 45, 24)
 def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
+    logging.debug("changing setting: %s - %d:%d -> %d:%d = %dC" % (day, start_hour, start_min, end_hour, end_min, desired_temp))
     global TIMER_SETTINGS
     hour = start_hour
     minute = start_min
@@ -158,10 +174,8 @@ def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
                 break
     except KeyError:
         logging.error("Wrong day: %s" % day)
-        print("Wrong day")
     except IndexError:
         logging.error("Wrong hour or minute: h: %d, min: %d, h:%d, min: %d" % (start_hour, start_min, end_hour, end_min))
-        print("wrong minute or hour,min has to be: 0, 15, 30, 45 hour 0-23")
     save_heating_settings(it=TIMER_SETTINGS)
     return
 
@@ -170,7 +184,9 @@ def db_worker():
     global HEATING
     global current_humidity
     global current_temperature
-    """runs in own thread to log data"""
+    global humidities
+    global temperatures
+
     while True:
         results = q.get(block=True, timeout=None)
         if results is None:
@@ -180,25 +196,27 @@ def db_worker():
                 humidities[results['location']].appendleft(results['humidity'])
             except KeyError:
                 humidities[results['location']] = collections.deque(5 * [results['humidity']], 5)
-            print(humidities)
             try:
                 temperatures[results['location']].appendleft(results['temp'])
             except KeyError:
                 temperatures[results['location']] = collections.deque(5 * [results['temp']], 5)
-            print(temperatures)
+
             # TODO: only record if its changed
             current_humidity = results['humidity']
             current_temperature = results['temp']
 
-            print(normalise_dict(temperatures))
-            print(normalise_dict(humidities))
+            normalise_dict(temperatures)
+            normalise_dict(humidities)
+
+            logging.debug(temperatures)
+            logging.debug(humidities)
             results['heating'] = HEATING
             if not DEV:
                 db.put(results)
 
 
 def run():
-    load_heating_settings()
+    load_heating_settings_from_file()
     client = mqtt.Client()
     client.connect(SERVER_HOST, SERVER_MQTT_PORT, SERVER_TIMEOUT)
 

@@ -8,7 +8,7 @@ from flask_cors import CORS
 import server
 from errors import *
 from settings import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL
-from timer_settings import TIMER_SETTINGS
+from timer_settings import DEFAULT_TIMER_SETTINGS
 from utils import add_headers, validate_req
 
 app = Flask(__name__)
@@ -38,7 +38,7 @@ def get_settings():
     hour = request.args.get('hour')
     minute = request.args.get('minute')
     try:
-        result = TIMER_SETTINGS
+        result = DEFAULT_TIMER_SETTINGS
         if day:
             result = result[day]
         if hour:
@@ -79,7 +79,7 @@ def switch_heating():
     logging.debug(request)
     heating = False if "off" in request.json and request.json["off"] is True else True
     force_minutes = FORCE_ON_DEFAULT if "minutes" not in request.json else request.json['minutes']
-    server.forcer(heating, period=force_minutes)
+    server.forced_switch(heating, period=force_minutes)
     result = "Forcing heating: %s for %d minute(s)" % (heating, force_minutes)
     logging.debug(result)
     return add_headers(result, 200)
