@@ -28,16 +28,20 @@ gpio.setcfg(__led, gpio.OUTPUT)
 gpio.setcfg(__HEATING_PIN, gpio.OUTPUT)
 
 
-def off(pin=__HEATING_PIN):
+def off(pin=__HEATING_PIN, led=False):
     global STATUS
     STATUS = Status.OFF.value
     gpio.output(pin, 0)
+    if led:
+        turn_led_on()
 
 
-def on(pin=__HEATING_PIN):
+def on(pin=__HEATING_PIN, led=False):
     global STATUS
     STATUS = Status.ON.value
     gpio.output(pin, 1)
+    if led:
+        turn_led_on()
 
 
 def get_status():
