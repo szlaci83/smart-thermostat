@@ -4,9 +4,7 @@ import time
 import datetime
 import requests
 import collections
-import pickle
 from pprint import pprint
-from enum import Enum
 
 from multiprocessing import Queue
 import threading
@@ -14,16 +12,10 @@ import threading
 from db import *
 from settings import *
 from credentials import *
+from utils import *
 
 import mock_relay as HEATING_RELAY
 import logging
-
-
-class ForceHeating(Enum):
-    ON = True
-    OFF = False
-    UNSET = None
-
 
 current_humidity = 0
 current_temperature = 0
@@ -39,52 +31,6 @@ humidities = {}
 temperatures = {}
 weather_data = {}
 TIMER_SETTINGS = {}
-
-
-
-
-def load_heating_settings_from_file(setting_file=HEATING_SETTINGS):
-    global TIMER_SETTINGS
-    try:
-        with open(setting_file, 'rb') as handle:
-            TIMER_SETTINGS = pickle.load(handle)
-    except FileNotFoundError or IOError:
-        logging.error("error while loading timer settings from: %s" % setting_file)
-        load_default_heating_settings()
-    logging.info("heating settings loaded from %s" % setting_file)
-
-
-def load_default_heating_settings():
-    logging.info("fallback to default settings")
-    global TIMER_SETTINGS
-    try:
-        from timer_settings import DEFAULT_TIMER_SETTINGS
-        TIMER_SETTINGS = DEFAULT_TIMER_SETTINGS
-    except ImportError:
-        logging.error("couldn't import timer_settings module, can't load default timer settings")
-
-
-def save_heating_settings(it, setting_file=HEATING_SETTINGS):
-    try:
-        with open(setting_file, 'wb') as file:
-            pickle.dump(it,  file, protocol=pickle.HIGHEST_PROTOCOL)
-    except FileNotFoundError or IOError:
-        logging.error("error while saving timer settings to: %s" % setting_file)
-    logging.info("heating settings saved to %s" % setting_file)
-
-
-def normalise_list(values_list):
-    # smoothing outliers (ignore readings outside tolerance)
-    if abs(values_list[0] - values_list[1]) > TOLERANCE and abs(values_list[1] - values_list[2]) > TOLERANCE:
-        values_list[1] = values_list[0]
-    return sum(values_list) / 5
-
-
-def normalise_dict(target_dict):
-    norm_dict = {}
-    for k, v in target_dict.items():
-        norm_dict[k] = normalise_list(v)
-    return norm_dict
 
 
 def on_connect(client, userdata, flags, rc):
@@ -120,20 +66,20 @@ def weather_worker():
 def timer_worker():
     while True:
         apply_setting()
-        time.sleep(1)
+        time.sleep(TIMER_REFRESH)
 
 
-def force_worker(on, period):
-    logging.debug("Forcing %s for %s minutes." % (str(on), period))
+def force_worker(switch_setting, period):
+    logging.debug("Forcing %s for %s minutes." % (str(switch_setting), period))
     global FORCE_HEATING
-    FORCE_HEATING = ForceHeating.ON if on else ForceHeating.OFF
+    FORCE_HEATING = switch_setting
     time.sleep(period * 60)
     logging.debug("Force over")
     FORCE_HEATING = ForceHeating.UNSET
 
 
-def forced_switch(on, period):
-    weather_thread = threading.Thread(target=force_worker, args=[on, period])
+def forced_switch(switch_setting, period):
+    weather_thread = threading.Thread(target=force_worker, args=[switch_setting, period])
     weather_thread.start()
 
 
@@ -147,7 +93,7 @@ def apply_setting():
 
     desired_temp = TIMER_SETTINGS[now.strftime("%A")][now.hour][int(now.minute / 15)]
     logging.debug("desired temperature: %d" % desired_temp)
-    if FORCE_HEATING.value is not None:
+    if FORCE_HEATING.value is not ForceHeating.UNSET:
         HEATING = FORCE_HEATING.value
     else:
         if current_temperature <= desired_temp - THRESHOLD:
@@ -163,7 +109,7 @@ def apply_setting():
     HEATING_RELAY.on(led=True) if HEATING else HEATING_RELAY.off(led=True)
 
 
-# ("Monday", 10, 0, 11, 45, 24)
+# Format: ("Monday", 10, 0, 11, 45, 24)
 def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
     logging.debug("changing setting: %s - %d:%d -> %d:%d = %dC" % (day, start_hour, start_min, end_hour, end_min, desired_temp))
     global TIMER_SETTINGS
@@ -182,7 +128,7 @@ def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
         logging.error("Wrong day: %s" % day)
     except IndexError:
         logging.error("Wrong hour or minute: h: %d, min: %d, h:%d, min: %d" % (start_hour, start_min, end_hour, end_min))
-    save_heating_settings(it=TIMER_SETTINGS)
+    save_heating_settings(setting=TIMER_SETTINGS)
     return
 
 
@@ -207,22 +153,24 @@ def db_worker():
             except KeyError:
                 temperatures[results['location']] = collections.deque(5 * [results['temp']], 5)
 
-            # TODO: only record if its changed
-            current_humidity = results['humidity']
-            current_temperature = results['temp']
+            norm_temp = normalise_dict(temperatures)
+            norm_hum = normalise_dict(humidities)
 
-            normalise_dict(temperatures)
-            normalise_dict(humidities)
+            logging.debug(norm_temp)
+            logging.debug(norm_hum)
 
-            logging.debug(temperatures)
-            logging.debug(humidities)
+            temperature_reading = norm_temp[MAIN_SENSOR]
+            humidity_reading = norm_hum[MAIN_SENSOR]
+
             results['heating'] = HEATING
             if not DEV:
-                db.put(results)
+                if temperature_reading != current_temperature or humidity_reading != current_humidity:
+                    db.put(results)
 
 
 def run():
-    load_heating_settings_from_file()
+    global TIMER_SETTINGS
+    TIMER_SETTINGS = load_heating_settings_from_file()
     client = mqtt.Client()
     client.connect(SERVER_HOST, SERVER_MQTT_PORT, SERVER_TIMEOUT)
 

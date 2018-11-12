@@ -8,12 +8,7 @@ if not os.getegid() == 0:
 from pyA20.gpio import gpio
 from pyA20.gpio import port
 from pyA20.gpio import connector
-from enum import Enum
-
-
-class Status(Enum):
-    ON = True
-    OFF = False
+from utils import Status
 
 
 global STATUS

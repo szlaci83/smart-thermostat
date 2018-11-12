@@ -7,9 +7,10 @@ from flask_cors import CORS
 
 import server
 from errors import *
-from settings import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL
+from settings import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL,\
+    HTTP_OK
 from timer_settings import DEFAULT_TIMER_SETTINGS
-from utils import add_headers, validate_req
+from utils import add_headers, validate_req, ForceHeating
 
 app = Flask(__name__)
 CORS(app)
@@ -27,7 +28,7 @@ def get_status():
               'temp': server.normalise_dict(server.temperatures),
               'target_temp': server.current_target_temperature}
     logging.info(status)
-    return add_headers(status, 200)
+    return add_headers(status, HTTP_OK)
 
 
 @app.route("/settings", methods=['GET'])
@@ -46,7 +47,7 @@ def get_settings():
         if minute:
             result = result[int(int(minute) / 15)]
         logging.info(result)
-        return add_headers(result, 200)
+        return add_headers(result, HTTP_OK)
     except KeyError:
         logging.error(DAY_ERROR)
         return add_headers(DAY_ERROR, DAY_ERROR['code'])
@@ -70,19 +71,19 @@ def post_settings():
                           setting['end_hour'],
                           setting['end_min'],
                           setting['desired_temp'])
-    return add_headers(True, 200)
+    return add_headers(True, HTTP_OK)
 
 
 @app.route("/switch-heating", methods=['POST'])
 def switch_heating():
     logging.info(request.args)
     logging.debug(request)
-    heating = False if "off" in request.json and request.json["off"] is True else True
+    heating = ForceHeating.OFF if "off" in request.json and request.json["off"] is True else ForceHeating.ON
     force_minutes = FORCE_ON_DEFAULT if "minutes" not in request.json else request.json['minutes']
     server.forced_switch(heating, period=force_minutes)
     result = "Forcing heating: %s for %d minute(s)" % (heating, force_minutes)
     logging.debug(result)
-    return add_headers(result, 200)
+    return add_headers(result, HTTP_OK)
 
 
 if __name__ == '__main__':

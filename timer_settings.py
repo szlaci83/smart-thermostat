@@ -1,6 +1,3 @@
-# settings for Nest is for every 15 mins...
-import pickle
-
 DEFAULT_TIMER_SETTINGS = {"Monday": [[20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20],
                                      [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20],
                                      [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20],
@@ -43,12 +40,7 @@ DEFAULT_TIMER_SETTINGS = {"Monday": [[20, 20, 20, 20], [20, 20, 20, 20], [20, 20
                           }
 
 
-def pickle_it(it, filename):
-    with open(filename + '.pickle', 'wb') as file:
-        pickle.dump(it,  file, protocol=pickle.HIGHEST_PROTOCOL)
-    return
-
-
 if __name__ == '__main__':
+    from utils import pickle_it
     pickle_it(DEFAULT_TIMER_SETTINGS, "timer")
 
