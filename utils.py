@@ -1,6 +1,8 @@
 from flask import jsonify, make_response
 import pickle
 import logging
+from multiprocessing import Queue
+
 from settings import SERVER_LOG, LOGGING_LEVEL, HEATING_SETTINGS_FILE, TOLERANCE
 from enum import Enum
 
@@ -17,6 +19,19 @@ class ForceHeating(Enum):
 class Status(Enum):
     ON = True
     OFF = False
+
+
+class Current:
+    q = Queue()
+    humidity = 0
+    temperature = 0
+    temperature = 0
+    humidities = {}
+    temperatures = {}
+    weather_data = {}
+    TIMER_SETTINGS = {}
+    HEATING = False
+    FORCE_HEATING = ForceHeating.UNSET
 
 
 def add_headers(response, http_code, token=None):
