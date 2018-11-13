@@ -12,6 +12,8 @@ from db import *
 from settings import *
 from credentials import *
 from utils import *
+from current_state import CurrentState
+from forceheating import ForceHeating
 
 import mock_relay as HEATING_RELAY
 import logging
@@ -29,7 +31,7 @@ def on_message(client, userdata, msg):
     try:
         data = json.loads(msg.payload.decode('utf-8'))
         data['epoch'] = str(time.time())
-        Current.q.put(data)
+        CurrentState.q.put(data)
     except Exception as e:
         logging.error(e)
     logging.debug("received data: %s" % str(data))
@@ -38,11 +40,11 @@ def on_message(client, userdata, msg):
 def weather_worker():
     query = WEATHER_QUERY % (str(CITY_ID), API_KEY)
     try:
-        Current.weather_data = requests.get(query, headers=JSON_HEADER).json()
+        CurrentState.weather_data = requests.get(query, headers=JSON_HEADER).json()
     except:
         logging.error("Could not get data from %s" % query)
-    logging.debug("WeatherAPI temp: %d" % Current.weather_data['main']['temp'])
-    logging.debug("WeatherAPI humidity: %d" % Current.weather_data['main']['humidity'])
+    logging.debug("WeatherAPI temp: %d" % CurrentState.weather_data['main']['temp'])
+    logging.debug("WeatherAPI humidity: %d" % CurrentState.weather_data['main']['humidity'])
     #pprint(weather_data)
     # enough sleep for free tier usage
     time.sleep(10 * 60 + 1)
@@ -56,10 +58,10 @@ def timer_worker():
 
 def force_worker(switch_setting, period):
     logging.debug("Forcing %s for %s minutes." % (str(switch_setting), period))
-    Current.FORCE_HEATING = switch_setting
+    CurrentState.FORCE_HEATING = switch_setting
     time.sleep(period * 60)
     logging.debug("Force over")
-    Current.FORCE_HEATING = ForceHeating.UNSET
+    CurrentState.FORCE_HEATING = ForceHeating.UNSET
 
 
 def forced_switch(switch_setting, period):
@@ -68,25 +70,25 @@ def forced_switch(switch_setting, period):
 
 
 def apply_setting():
-    logging.debug("current temperature: %d" % Current.temperature)
+    logging.debug("current temperature: %d" % CurrentState.temperature)
     now = datetime.datetime.now()
 
-    desired_temp = Current.TIMER_SETTINGS[now.strftime("%A")][now.hour][int(now.minute / 15)]
+    desired_temp = CurrentState.TIMER_SETTINGS[now.strftime("%A")][now.hour][int(now.minute / 15)]
     logging.debug("desired temperature: %d" % desired_temp)
-    if Current.FORCE_HEATING.value is not ForceHeating.UNSET:
-        Current.HEATING = Current.FORCE_HEATING.value
+    if CurrentState.FORCE_HEATING.value is not ForceHeating.UNSET:
+        CurrentState.HEATING = CurrentState.FORCE_HEATING.value
     else:
-        if Current.temperature <= desired_temp - THRESHOLD:
-            if not Current.HEATING:
-                Current.HEATING = True
-                logging.debug("HEATING: %s" % str(Current.HEATING))
+        if CurrentState.temperature <= desired_temp - THRESHOLD:
+            if not CurrentState.HEATING:
+                CurrentState.HEATING = True
+                logging.debug("HEATING: %s" % str(CurrentState.HEATING))
         else:
-            if Current.temperature >= desired_temp + THRESHOLD:
-                if Current.HEATING:
-                    Current.HEATING = False
-                    logging.debug("HEATING: %s" % str(Current.HEATING))
+            if CurrentState.temperature >= desired_temp + THRESHOLD:
+                if CurrentState.HEATING:
+                    CurrentState.HEATING = False
+                    logging.debug("HEATING: %s" % str(CurrentState.HEATING))
 
-    HEATING_RELAY.on(led=True) if Current.HEATING else HEATING_RELAY.off(led=True)
+    HEATING_RELAY.on(led=True) if CurrentState.HEATING else HEATING_RELAY.off(led=True)
 
 
 # Format: ("Monday", 10, 0, 11, 45, 24)
@@ -99,7 +101,7 @@ def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
             if minute == 60:
                 minute = 0
                 hour += 1
-            Current.TIMER_SETTINGS[day][hour][int(minute / 15)] = desired_temp
+            CurrentState.TIMER_SETTINGS[day][hour][int(minute / 15)] = desired_temp
             minute += 15
             if hour == end_hour and minute == end_min:
                 break
@@ -107,27 +109,27 @@ def change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
         logging.error("Wrong day: %s" % day)
     except IndexError:
         logging.error("Wrong hour or minute: h: %d, min: %d, h:%d, min: %d" % (start_hour, start_min, end_hour, end_min))
-    save_heating_settings(setting=Current.TIMER_SETTINGS)
+    save_heating_settings(setting=CurrentState.TIMER_SETTINGS)
     return
 
 
 def db_worker():
     while True:
-        results = Current.q.get(block=True, timeout=None)
+        results = CurrentState.q.get(block=True, timeout=None)
         if results is None:
             continue
         else:
             try:
-                Current.humidities[results['location']].appendleft(results['humidity'])
+                CurrentState.humidities[results['location']].appendleft(results['humidity'])
             except KeyError:
-                Current.humidities[results['location']] = collections.deque(5 * [results['humidity']], 5)
+                CurrentState.humidities[results['location']] = collections.deque(5 * [results['humidity']], 5)
             try:
-                Current.temperatures[results['location']].appendleft(results['temp'])
+                CurrentState.temperatures[results['location']].appendleft(results['temp'])
             except KeyError:
-                Current.temperatures[results['location']] = collections.deque(5 * [results['temp']], 5)
+                CurrentState.temperatures[results['location']] = collections.deque(5 * [results['temp']], 5)
 
-            norm_temp = normalise_dict(Current.temperatures)
-            norm_hum = normalise_dict(Current.humidities)
+            norm_temp = normalise_dict(CurrentState.temperatures)
+            norm_hum = normalise_dict(CurrentState.humidities)
 
             logging.debug(norm_temp)
             logging.debug(norm_hum)
@@ -137,14 +139,14 @@ def db_worker():
 
             results['heating'] = HEATING
             if not DEV:
-                if temperature_reading != Current.temperature or humidity_reading != Current.humidity:
+                if temperature_reading != CurrentState.temperature or humidity_reading != CurrentState.humidity:
                     db.put(results)
-            Current.temperature = temperature_reading
-            Current.humidity = humidity_reading
+            CurrentState.temperature = temperature_reading
+            CurrentState.humidity = humidity_reading
 
 
 def run():
-    Current.TIMER_SETTINGS = load_heating_settings_from_file()
+    CurrentState.TIMER_SETTINGS = load_heating_settings_from_file()
     client = mqtt.Client()
     client.connect(SERVER_HOST, SERVER_MQTT_PORT, SERVER_TIMEOUT)
 
