@@ -4,6 +4,7 @@ import json
 from boto3.dynamodb.conditions import Key
 from settings import *
 
+
 class DatabaseManager:
     def __init__(self):
         self.dynamodb = boto3.resource('dynamodb')
