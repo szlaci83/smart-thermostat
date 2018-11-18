@@ -4,15 +4,16 @@ import json
 from boto3.dynamodb.conditions import Key
 from settings import *
 
+
 class DatabaseManager:
     def __init__(self):
         self.dynamodb = boto3.resource('dynamodb')
+        #TODO: create tables proframatically for locations...
         self.table = self.dynamodb.Table(TABLE_NAME)
 
     # Returns True if put was successful
     def put(self, data):
     # TODO: store location in DB as well (String)
-    # TODO: store HEATING value in DB as well (boolean)
         response = self.table.put_item(
             Item={
                 'device_id': data["client_id"],

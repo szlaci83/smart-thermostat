@@ -1,37 +1,10 @@
 from flask import jsonify, make_response
 import pickle
 import logging
-from multiprocessing import Queue
 
 from settings import SERVER_LOG, LOGGING_LEVEL, HEATING_SETTINGS_FILE, TOLERANCE
-from enum import Enum
-
 
 logging.basicConfig(filename=SERVER_LOG, level=LOGGING_LEVEL, format="%(asctime)s:%(levelname)s:%(message)s")
-
-
-class ForceHeating(Enum):
-    ON = True
-    OFF = False
-    UNSET = None
-
-
-class Status(Enum):
-    ON = True
-    OFF = False
-
-
-class Current:
-    q = Queue()
-    humidity = 0
-    temperature = 0
-    temperature = 0
-    humidities = {}
-    temperatures = {}
-    weather_data = {}
-    TIMER_SETTINGS = {}
-    HEATING = False
-    FORCE_HEATING = ForceHeating.UNSET
 
 
 def add_headers(response, http_code, token=None):
@@ -100,18 +73,3 @@ def save_heating_settings(setting, setting_file=HEATING_SETTINGS_FILE):
         return False
     logging.info("heating settings saved to %s" % setting_file)
     return True
-
-
-def normalise_list(values_list, tolerance=TOLERANCE):
-    # smoothing outliers (ignore readings outside tolerance)
-    if abs(values_list[0] - values_list[1]) > tolerance and abs(values_list[1] - values_list[2]) > tolerance:
-        values_list[1] = values_list[0]
-    return sum(values_list) / 5
-
-
-def normalise_dict(target_dict):
-    norm_dict = {}
-    for k, v in target_dict.items():
-        norm_dict[k] = normalise_list(v)
-    return norm_dict
-
