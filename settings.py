@@ -38,7 +38,7 @@ SERVER_REST_PORT = 8887
 # Heating
 HEATING = False
 THRESHOLD = 0.8
-TIMER_REFRESH = 5
+TIMER_REFRESH = 1
 MAIN_SENSOR = 'mock_location1'
 QUEUE_SIZE = 5  # queue size for smoothing
 

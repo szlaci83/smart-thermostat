@@ -36,7 +36,13 @@ def on_message(client, userdata, msg):
 
 
 def weather_worker():
+    old_state = copy.deepcopy(current_state)
     current_state.refresh_weather_data()
+    logging.debug("old state: %s" % old_state)
+    logging.debug("new state: %s" % current_state)
+    if old_state != current_state:
+        logging.debug("saving new state: %s" % current_state)
+        # TODO save to DB
     time.sleep(WEATHER_REFRESH)
 
 
@@ -60,26 +66,31 @@ def forced_switch(switch_setting, period):
 
 
 def apply_setting():
+    # TODO: save current_state into its own table if there is change
     logging.debug("current temperature: %d" % current_state.get_temperature())
     HEATING_RELAY.on(led=True) if current_state.is_HEATING else HEATING_RELAY.off(led=True)
 
 
-def db_worker():
+def reading_worker():
     while True:
         results = q.get(block=True, timeout=None)
         if results is None:
             continue
         else:
             old_state = copy.deepcopy(current_state)
+            logging.debug("old state: %s" % old_state)
             current_state.add_reading(results['location'], results['humidity'], results['temp'])
             if ((old_state.get_humidity(sensor=results['location']) != current_state.get_humidity(
                     sensor=results['location'])) or
                     (old_state.get_temperature(sensor=results['location']) != current_state.get_temperature(
                         sensor=results['location']))):
-                results['heating'] = current_state.HEATING
-                logging.debug(current_state)
+                results['heating'] = current_state.is_HEATING
                 if not DEV:
                     db.put(results)
+            logging.debug("current state: %s" % current_state)
+            if old_state != current_state:
+                logging.debug("saving new state: %s" % current_state)
+                # TODO save to DB
 
 
 def run():
@@ -89,8 +100,8 @@ def run():
     client.on_connect = on_connect
     client.on_message = on_message
 
-    db_thread = threading.Thread(target=db_worker)
-    db_thread.start()
+    reading_thread = threading.Thread(target=reading_worker)
+    reading_thread.start()
 
     timer_thread = threading.Thread(target=timer_worker)
     timer_thread.start()

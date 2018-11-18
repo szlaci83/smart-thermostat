@@ -37,7 +37,7 @@ class State:
         return temperature
 
     @property
-    def get_humidity_out(self):
+    def humidity_out(self):
         try:
             humidity = self.weather_data['main']['humidity']
         except KeyError:
@@ -45,7 +45,7 @@ class State:
         return humidity
 
     @property
-    def get_temperature_out(self):
+    def temperature_out(self):
         try:
             temperature = self.weather_data['main']['temp']
         except KeyError:
@@ -113,6 +113,7 @@ class State:
 
     # Format: ("Monday", 10, 0, 11, 45, 24)
     def change_setting(self, day, start_hour, start_min, end_hour, end_min, desired_temp):
+        # TODO : save state if changed
         logging.debug("changing setting: %s - %d:%d -> %d:%d = %dC" % (
         day, start_hour, start_min, end_hour, end_min, desired_temp))
         hour = start_hour
@@ -167,13 +168,34 @@ class State:
         logging.info("heating settings saved to %s" % setting_file)
         return True
 
+    def __cmp__(self, other):
+        return self.humidity_out == other.humidity_out and \
+               self.temperature_out == other.temperature_out and \
+               self.desired_temperature == other.desired_temperature and \
+               self.get_humidity() == other.get_humidity() and \
+               self.get_temperature() == other.get_temperature() and \
+               self.is_HEATING == other.is_HEATING and \
+               self.force_heating == other.force_heating
+
+    def __eq__(self, other):
+        return self.__cmp__(other)
+
+    def __ne__(self, other):
+        return self.humidity_out != other.humidity_out or \
+               self.temperature_out != other.temperature_out or \
+               self.desired_temperature != other.desired_temperature or \
+               self.get_humidity() != other.get_humidity() or \
+               self.get_temperature() != other.get_temperature() or \
+               self.is_HEATING != other.is_HEATING or \
+               self.force_heating != other.force_heating
+
     def __repr__(self):
         data = {"humidity": self.get_humidity(),
                 "temperature": self.get_temperature(),
                 "heating": self.is_HEATING,
                 "desired_temperature": self.desired_temperature,
-                "outside_temp": self.get_temperature_out,
-                "outside_humidity": self.get_humidity_out,
+                "outside_temp": self.temperature_out,
+                "outside_humidity": self.humidity_out,
                 "timestamp": str(time.time()),
                 "force_heating": self.force_heating.value}
         return repr(data)
