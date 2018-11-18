@@ -10,7 +10,8 @@ from errors import *
 from settings import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL,\
     HTTP_OK
 from timer_settings import DEFAULT_TIMER_SETTINGS
-from utils import add_headers, validate_req, ForceHeating
+from utils import add_headers, validate_req
+from forceheating import ForceHeating
 
 app = Flask(__name__)
 CORS(app)
@@ -65,7 +66,7 @@ def post_settings():
         logging.error(JSON_ERROR)
         return add_headers(JSON_ERROR, JSON_ERROR['code'])
     setting = request.json
-    server.change_setting(setting['day'],
+    server.current_state.change_setting(setting['day'],
                           setting['start_hour'],
                           setting['start_min'],
                           setting['end_hour'],
