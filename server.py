@@ -53,6 +53,7 @@ def timer_worker():
 
 
 def force_worker(switch_setting, period):
+    # todo save state change
     logging.debug("Forcing %s for %s minutes." % (str(switch_setting), period))
     current_state.force_heating = switch_setting
     time.sleep(period * 60)
@@ -91,6 +92,15 @@ def reading_worker():
             if old_state != current_state:
                 logging.debug("saving new state: %s" % current_state)
                 # TODO save to DB
+
+
+def change_timer_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
+    old_state = copy.deepcopy(current_state)
+    logging.debug("old state: %s" % old_state)
+    current_state.change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp)
+    if old_state != current_state:
+        logging.debug("saving new state: %s" % current_state)
+        # TODO save to DB
 
 
 def run():

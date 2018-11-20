@@ -54,11 +54,20 @@ class State:
 
     @property
     def desired_temperature(self):
-        now = datetime.datetime.now()
-
-        desired_temp = self.TIMER_SETTINGS[now.strftime("%A")][now.hour][int(now.minute / 15)]
+        desired_temp = self.get_setting_for_time()
         logging.debug("desired temp: %d" % desired_temp)
         return desired_temp
+
+    def get_setting_for_time(self, target_date=datetime.datetime.now(), day=None, hour=None, minute=None):
+        if target_date:
+            day, hour, minute = target_date.strftime("%A"), target_date.hour, target_date.minute
+        if day:
+            result = self.TIMER_SETTINGS[day]
+        if hour:
+            result = result[int(hour)]
+        if minute:
+            result = result[int(int(minute) / 15)]
+        return result
 
     @property
     def is_HEATING(self):

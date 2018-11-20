@@ -1,17 +1,15 @@
 import logging
 import threading
-import time
 
 from flask import Flask, request
 from flask_cors import CORS
 
 import server
 from errors import *
-from settings import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL,\
-    HTTP_OK
-from timer_settings import DEFAULT_TIMER_SETTINGS
-from utils import add_headers, validate_req
 from forceheating import ForceHeating
+from settings import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL, \
+    HTTP_OK
+from utils import add_headers, validate_req
 
 app = Flask(__name__)
 CORS(app)
@@ -21,13 +19,7 @@ CORS(app)
 def get_status():
     logging.info(request.args)
     logging.debug(request)
-    status = {'epoch': str(time.time()),
-              'outside_temp': server.weather_data['main']['temp'],
-              'outside_humidity': server.weather_data['main']['humidity'],
-              'heating_status': "ON" if server.HEATING else "OFF",
-              'humidity': server.normalise_dict(server.humidities),
-              'temp': server.normalise_dict(server.temperatures),
-              'target_temp': server.current_target_temperature}
+    status = server.current_state
     logging.info(status)
     return add_headers(status, HTTP_OK)
 
@@ -40,13 +32,7 @@ def get_settings():
     hour = request.args.get('hour')
     minute = request.args.get('minute')
     try:
-        result = DEFAULT_TIMER_SETTINGS
-        if day:
-            result = result[day]
-        if hour:
-            result = result[int(hour)]
-        if minute:
-            result = result[int(int(minute) / 15)]
+        result = server.current_state.get_setting_for_time(day=day, hour=hour, minute=minute, target_date=None)
         logging.info(result)
         return add_headers(result, HTTP_OK)
     except KeyError:
