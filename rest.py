@@ -66,12 +66,7 @@ def post_settings():
         logging.error(JSON_ERROR)
         return add_headers(JSON_ERROR, JSON_ERROR['code'])
     setting = request.json
-    server.current_state.change_setting(setting['day'],
-                          setting['start_hour'],
-                          setting['start_min'],
-                          setting['end_hour'],
-                          setting['end_min'],
-                          setting['desired_temp'])
+    server.change_timer_setting(**setting)
     return add_headers(True, HTTP_OK)
 
 
