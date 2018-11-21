@@ -19,7 +19,7 @@ CORS(app)
 def get_status():
     logging.info(request.args)
     logging.debug(request)
-    status = server.current_state
+    status = server.current_state.get_json_repr()
     logging.info(status)
     return add_headers(status, HTTP_OK)
 
@@ -79,4 +79,3 @@ if __name__ == '__main__':
     server_thread.start()
 
     app.run(host=SERVER_HOST, port=SERVER_REST_PORT)
-

@@ -198,8 +198,8 @@ class State:
                self.is_HEATING != other.is_HEATING or \
                self.force_heating != other.force_heating
 
-    def __repr__(self):
-        data = {"humidity": self.get_humidity(),
+    def get_json_repr(self):
+        return {"humidity": self.get_humidity(),
                 "temperature": self.get_temperature(),
                 "heating": self.is_HEATING,
                 "desired_temperature": self.desired_temperature,
@@ -207,4 +207,7 @@ class State:
                 "outside_humidity": self.humidity_out,
                 "timestamp": str(time.time()),
                 "force_heating": self.force_heating.value}
+
+    def __repr__(self):
+        data = self.get_json_repr()
         return repr(data)
