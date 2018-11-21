@@ -3,6 +3,9 @@ import logging
 # ENV
 DEV = True
 
+# IMAGE LOCATION: https://openweathermap.org/img/w/04n.png
+# heat index calculation: https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
+# dew point calc : 
 
 # SERVER
 SERVER_HOST = "localhost"

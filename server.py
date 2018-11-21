@@ -53,7 +53,6 @@ def timer_worker():
 
 
 def force_worker(switch_setting, period):
-    # todo save state change
     logging.debug("Forcing %s for %s minutes." % (str(switch_setting), period))
     current_state.force_heating = switch_setting
     time.sleep(period * 60)

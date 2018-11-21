@@ -58,15 +58,14 @@ class State:
         logging.debug("desired temp: %d" % desired_temp)
         return desired_temp
 
-    def get_setting_for_time(self, target_date=datetime.datetime.now(), day=None, hour=None, minute=None):
-        if target_date:
+    def get_setting_for_time(self, day=None, hour=None, minute=None, target_date=datetime.datetime.now()):
+        if day is None:
             day, hour, minute = target_date.strftime("%A"), target_date.hour, target_date.minute
-        if day:
-            result = self.TIMER_SETTINGS[day]
-        if hour:
+        result = self.TIMER_SETTINGS[day]
+        if hour is not None:
             result = result[int(hour)]
-        if minute:
-            result = result[int(int(minute) / 15)]
+            if minute is not None:
+                result = result[int(int(minute) / 15)]
         return result
 
     @property
@@ -85,7 +84,6 @@ class State:
                 if self.get_temperature() >= self.desired_temperature + THRESHOLD:
                     logging.debug("HEATING: %s" % False)
                     return False
-
 
     @staticmethod
     def _normalise_list(values_list, tolerance=TOLERANCE):
@@ -115,14 +113,12 @@ class State:
         try:
             self.weather_data = requests.get(query, headers=JSON_HEADER).json()
         except:
-             logging.error("Could not get data from %s" % query)
-             self.weather_data = {}
+            logging.error("Could not get data from %s" % query)
+            self.weather_data = {}
         logging.debug("WeatherAPI temp: %d" % self.weather_data['main']['temp'])
         logging.debug("WeatherAPI humidity: %d" % self.weather_data['main']['humidity'])
 
-    # Format: ("Monday", 10, 0, 11, 45, 24)
     def change_setting(self, day, start_hour, start_min, end_hour, end_min, desired_temp):
-        # TODO : save state if changed
         logging.debug("changing setting: %s - %d:%d -> %d:%d = %dC" % (
         day, start_hour, start_min, end_hour, end_min, desired_temp))
         hour = start_hour
@@ -206,8 +202,10 @@ class State:
                 "outside_temp": self.temperature_out,
                 "outside_humidity": self.humidity_out,
                 "timestamp": str(time.time()),
-                "force_heating": self.force_heating.value}
+                "force_heating": self.force_heating.value
+                }
 
     def __repr__(self):
         data = self.get_json_repr()
         return repr(data)
+

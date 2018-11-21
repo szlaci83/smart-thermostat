@@ -24,6 +24,15 @@ def get_status():
     return add_headers(status, HTTP_OK)
 
 
+@app.route("/weather", methods=['GET'])
+def get_weather():
+    logging.info(request.args)
+    logging.debug(request)
+    status = server.current_state.weather_data
+    logging.info(status)
+    return add_headers(status, HTTP_OK)
+
+
 @app.route("/settings", methods=['GET'])
 def get_settings():
     logging.info(request.args)
@@ -31,6 +40,10 @@ def get_settings():
     day = request.args.get('day')
     hour = request.args.get('hour')
     minute = request.args.get('minute')
+    # if hour is present, day has to be present, if minute is present, hour and day has to be present
+    if (day is None and hour is not None) or (minute is not None and (hour is None or day is None)):
+        logging.error(PARAM_ERROR)
+        return add_headers(PARAM_ERROR, PARAM_ERROR['code'])
     try:
         result = server.current_state.get_setting_for_time(day=day, hour=hour, minute=minute, target_date=None)
         logging.info(result)
