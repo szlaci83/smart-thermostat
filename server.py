@@ -79,14 +79,14 @@ def reading_worker():
         else:
             old_state = copy.deepcopy(current_state)
             logging.debug("old state: %s" % old_state)
-            current_state.add_reading(results['location'], results['humidity'], results['temp'])
-            if ((old_state.get_humidity(sensor=results['location']) != current_state.get_humidity(
-                    sensor=results['location'])) or
-                    (old_state.get_temperature(sensor=results['location']) != current_state.get_temperature(
-                        sensor=results['location']))):
+            location = results['location']
+            current_state.add_reading(location, results['humidity'], results['temp'])
+
+            if ((old_state.get_humidity(sensor=location) != current_state.get_humidity(sensor=location)) or
+                    (old_state.get_temperature(sensor=location) != current_state.get_temperature(sensor=location))):
                 results['heating'] = current_state.is_HEATING
                 if not DEV:
-                    db.put(table_name=results['location'], data=results)
+                    db.put(table_name=location, data=results)
             logging.debug("current state: %s" % current_state)
             if old_state != current_state:
                 logging.debug("saving new state: %s" % current_state)
