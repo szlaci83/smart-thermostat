@@ -86,12 +86,22 @@ def reading_worker():
                         sensor=results['location']))):
                 results['heating'] = current_state.is_HEATING
                 if not DEV:
-                    db.put(results)
+                    db.put(table_name=results['location'], data=results)
             logging.debug("current state: %s" % current_state)
             if old_state != current_state:
                 logging.debug("saving new state: %s" % current_state)
-                # TODO save to DB
+                if not DEV:
+                    db.put(table_name=STATE_TABLE, data=current_state.get_db_repr(), partition_key=STATE_PK, sort_key=STATE_SK)
 
+
+def change_timer_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
+    old_state = copy.deepcopy(current_state)
+    logging.debug("old state: %s" % old_state)
+    current_state.change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp)
+    if old_state != current_state:
+        logging.debug("saving new state: %s" % current_state)
+        if not DEV:
+            db.put(table_name=STATE_TABLE, data=current_state.get_db_repr(), partition_key=STATE_PK, sort_key=STATE_SK)
 
 def run():
     client = mqtt.Client()

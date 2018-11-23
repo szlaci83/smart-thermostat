@@ -8,20 +8,54 @@ from settings import *
 class DatabaseManager:
     def __init__(self):
         self.dynamodb = boto3.resource('dynamodb')
-        #TODO: create tables proframatically for locations...
-        self.table = self.dynamodb.Table(TABLE_NAME)
+
+    def __create_table(self, table_name, partition_key, sort_key):
+        attribute_list = [
+            {
+                'AttributeName': partition_key['name'],
+                'AttributeType': partition_key['type']
+            },
+            {
+                'AttributeName': sort_key['name'],
+                'AttributeType': sort_key['type']
+            }]
+
+        params = {
+            'TableName': table_name,
+            'KeySchema': [
+                {
+                    'AttributeName': partition_key['name'],
+                    'KeyType': partition_key['key_type']  # Partition key
+                },
+                {
+                    'AttributeName': sort_key['name'],
+                    'KeyType': sort_key['key_type']  # Sort key
+                }
+            ],
+            'AttributeDefinitions': attribute_list,
+            'ProvisionedThroughput': {
+                'ReadCapacityUnits': 10,
+                'WriteCapacityUnits': 10
+            }}
+
+        table = self.dynamodb.create_table(**params)
+
+        return table.table_status
+
+    def __create_if_not_exist(self, table_name, partition_key, sort_key):
+        client = boto3.client("dynamodb")
+        try:
+            response = client.describe_table(TableName=table_name)
+        except client.exceptions.ResourceNotFoundException:
+            response = self.__create_table(table_name, partition_key, sort_key)
+            waiter = client.get_waiter('table_exists')
+            waiter.wait(TableName=table_name)
+        return response
 
     # Returns True if put was successful
-    def put(self, data):
-    # TODO: store location in DB as well (String)
-        response = self.table.put_item(
-            Item={
-                'device_id': data["client_id"],
-                'date': str(data['epoch']),
-                'temp': data['temp'],
-                'humidity': data['humidity']
-            }
-        )
+    def put(self, table_name, data, partition_key=READING_PK, sort_key=READING_SK):
+        self.__create_if_not_exist(table_name=table_name, partition_key=partition_key, sort_key=sort_key)
+        response = self.dynamodb.Table(table_name).put_item(Item=data)
         return response['ResponseMetadata']['HTTPStatusCode'] == HTTP_OK
 
     def add_del_update_db_record(self, sql_query, args=()):
@@ -29,8 +63,8 @@ class DatabaseManager:
         self.conn.commit()
         return
 
-    def get_by_id(self, id):
-        response = self.table.query(
+    def get_by_id(self, table_name,  id):
+        response = self.dynamodb.Table(table_name).query(
             KeyConditionExpression=Key('device_id').eq(id))
         return response
 
