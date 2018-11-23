@@ -205,6 +205,17 @@ class State:
                 "force_heating": self.force_heating.value
                 }
 
+    def get_db_repr(self):
+        return {"humidity": str(self.get_humidity()),
+                "temperature": str(self.get_temperature()),
+                "heating": 1 if self.is_HEATING else 0,
+                "desired_temperature": str(self.desired_temperature),
+                "outside_temp": str(self.temperature_out),
+                "outside_humidity": str(self.humidity_out),
+                "timestamp": str(time.time()),
+                "force_heating": str(self.force_heating.value)
+                }
+
     def __repr__(self):
         data = self.get_json_repr()
         return repr(data)

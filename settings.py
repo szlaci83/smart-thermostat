@@ -1,7 +1,7 @@
 import logging
 
 # ENV
-DEV = True
+DEV = False
 
 # IMAGE LOCATION: https://openweathermap.org/img/w/04n.png
 # heat index calculation: https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
@@ -32,6 +32,11 @@ TOPIC = "topic/temperature"
 TABLE_NAME = 'temp_test'
 MOCK_FILE = 'db.csv'
 HEATING_SETTINGS_FILE = 'timer.pickle'
+READING_PK = {'name': 'client_id', 'key_type': 'HASH', 'type': 'N'}
+READING_SK = {'name': 'epoch', 'key_type': 'RANGE', 'type': 'S'}
+STATE_TABLE = "state"
+STATE_PK = {'name': 'heating', 'key_type': 'HASH', 'type': 'N'}
+STATE_SK = {'name': 'timestamp', 'key_type': 'RANGE', 'type': 'S'}
 
 # REST API
 HTTP_OK = 200
