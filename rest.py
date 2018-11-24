@@ -15,7 +15,7 @@ app = Flask(__name__)
 CORS(app)
 
 
-@app.route("/status", methods=['GET'])
+@app.route("/state", methods=['GET'])
 def get_status():
     logging.info(request.args)
     logging.debug(request)
@@ -24,7 +24,7 @@ def get_status():
     return add_headers(status, HTTP_OK)
 
 
-@app.route("/weather", methods=['GET'])
+@app.route("/detailed-weather", methods=['GET'])
 def get_weather():
     logging.info(request.args)
     logging.debug(request)
@@ -33,8 +33,23 @@ def get_weather():
     return add_headers(status, HTTP_OK)
 
 
+@app.route("/sys-info", methods=['GET'])
+def get_settings():
+    return add_headers("OK", HTTP_OK)
+
+
 @app.route("/settings", methods=['GET'])
 def get_settings():
+    return add_headers("OK", HTTP_OK)
+
+
+@app.route("/settings", methods=['POST'])
+def post_settings():
+    return add_headers("OK", HTTP_OK)
+
+
+@app.route("/heating-settings", methods=['GET'])
+def get_heating_settings():
     logging.info(request.args)
     logging.debug(request)
     day = request.args.get('day')
@@ -56,8 +71,8 @@ def get_settings():
         return add_headers(TIME_ERROR, TIME_ERROR['code'])
 
 
-@app.route("/settings", methods=['POST'])
-def post_settings():
+@app.route("/heating-settings", methods=['POST'])
+def post_heating_settings():
     logging.info(request.args)
     logging.debug(request)
     fields = ['day', 'start_hour', 'start_min', 'end_hour', 'end_min', 'desired_temp']

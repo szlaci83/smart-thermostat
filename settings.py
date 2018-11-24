@@ -45,15 +45,18 @@ SERVER_REST_PORT = 8887
 
 # Heating
 HEATING = False
-THRESHOLD = 0.8
-TIMER_REFRESH = 5
-MAIN_SENSOR = 'mock_location1'
 QUEUE_SIZE = 5  # queue size for smoothing
-
 # 1 Hour (it will be multiplied by 60 again)
 FORCE_ON_DEFAULT = 1 * 60
 TOLERANCE = 1
+TIMER_REFRESH = 5
 
+#Switchable settings:
+THRESHOLD = 0.8
+MAIN_SENSOR = 'mock_location1'
+
+
+# Weather API settings
 WEATHER_QUERY = "http://api.openweathermap.org/data/2.5/weather?units=metric&id=%s&APPID=%s"
 JSON_HEADER = {'content-type': 'application/json'}
 WEATHER_REFRESH = 10 * 60 + 1
