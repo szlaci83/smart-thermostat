@@ -5,7 +5,7 @@ import time
 import json
 from pprint import pprint
 from random import *
-from settings import *
+from properties import *
 
 
 '''
@@ -15,7 +15,7 @@ from settings import *
 client = mqtt.Client()
 
 data = {
-    'client_id': 464,
+    'client_id': 46,
     'location': 'mock_location1'
 }
 

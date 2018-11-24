@@ -2,7 +2,7 @@ import boto3
 import decimal
 import json
 from boto3.dynamodb.conditions import Key
-from settings import *
+from properties import *
 
 
 class DatabaseManager:

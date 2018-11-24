@@ -6,7 +6,7 @@ import datetime
 import time
 import pickle
 
-from settings import TOLERANCE, MAIN_SENSOR, WEATHER_QUERY, JSON_HEADER, THRESHOLD, HEATING_SETTINGS_FILE, QUEUE_SIZE
+from properties import TOLERANCE, WEATHER_QUERY, JSON_HEADER, HEATING_SETTING_FILE, QUEUE_SIZE, MAIN_SETTING_FILE
 from credentials import API_KEY, CITY_ID
 
 logging.basicConfig(filename="", level=logging.DEBUG, format="%(asctime)s:%(levelname)s:%(message)s")
@@ -17,24 +17,36 @@ class State:
         self.humidities = {}
         self.temperatures = {}
         self.weather_data = {}
-        self.TIMER_SETTINGS = self.load_heating_settings_from_file()
+        self.TIMER_SETTINGS = self.load_settings_from_file()
+        self.settings = self.load_settings_from_file(setting_file=MAIN_SETTING_FILE)
         self.HEATING = False
         self.force_heating = ForceHeating.UNSET
         self.refresh_weather_data()
 
-    def get_humidity(self, sensor=MAIN_SENSOR):
+    def get_humidity(self, sensor_name='MAIN_SENSOR'):
+        try:
+            sensor = self.settings[sensor_name]
+        except KeyError:
+            sensor = None
         try:
             humidity = self._normalise_list(self.humidities[sensor]) if sensor else self._normalise_dict(self.humidities)
         except KeyError:
             humidity = 0
         return humidity
 
-    def get_temperature(self, sensor=MAIN_SENSOR):
+    def get_temperature(self, sensor_name='MAIN_SENSOR'):
+        try:
+            sensor = self.settings[sensor_name]
+        except KeyError:
+            sensor = None
         try:
             temperature = self._normalise_list(self.temperatures[sensor]) if sensor else self._normalise_dict(self.temperatures)
         except KeyError:
             temperature = 0
         return temperature
+
+    def get_main_settings(self):
+        return self.settings
 
     @property
     def humidity_out(self):
@@ -77,11 +89,11 @@ class State:
             return self.force_heating.value
         else:
             logging.debug("checking heating")
-            if self.get_temperature() <= self.desired_temperature - THRESHOLD:
+            if self.get_temperature() <= self.desired_temperature - self.settings['THRESHOLD']:
                 logging.debug("HEATING: %s" % True)
                 return True
             else:
-                if self.get_temperature() >= self.desired_temperature + THRESHOLD:
+                if self.get_temperature() >= self.desired_temperature + self.settings['THRESHOLD']:
                     logging.debug("HEATING: %s" % False)
                     return False
 
@@ -118,7 +130,7 @@ class State:
         logging.debug("WeatherAPI temp: %d" % self.weather_data['main']['temp'])
         logging.debug("WeatherAPI humidity: %d" % self.weather_data['main']['humidity'])
 
-    def change_setting(self, day, start_hour, start_min, end_hour, end_min, desired_temp):
+    def change_heating_setting(self, day, start_hour, start_min, end_hour, end_min, desired_temp):
         logging.debug("changing setting: %s - %d:%d -> %d:%d = %dC" % (
         day, start_hour, start_min, end_hour, end_min, desired_temp))
         hour = start_hour
@@ -138,21 +150,29 @@ class State:
         except IndexError:
             logging.error(
                 "Wrong hour or minute: h: %d, min: %d, h:%d, min: %d" % (start_hour, start_min, end_hour, end_min))
-        self._save_heating_settings(setting=self.TIMER_SETTINGS)
+        self._save_settings(setting=self.TIMER_SETTINGS)
         return
 
-    def load_heating_settings_from_file(self, setting_file=HEATING_SETTINGS_FILE):
+    def change_main_setting(self, settings):
+        self._save_settings(settings, setting_file=MAIN_SETTING_FILE)
+        self.settings = settings
+        return
+
+    def load_settings_from_file(self, setting_file=HEATING_SETTING_FILE):
         try:
             with open(setting_file, 'rb') as handle:
                 settings = pickle.load(handle)
         except FileNotFoundError or IOError:
             logging.error("error while loading timer settings from: %s" % setting_file)
-            settings = self.load_default_heating_settings()
+            if setting_file == HEATING_SETTING_FILE:
+                settings = self.load_default_timer_settings(setting_file)
+            if setting_file == MAIN_SETTING_FILE:
+                settings = self.load_default_main_settings()
         logging.info("heating settings loaded from %s" % setting_file)
         return settings
 
     @staticmethod
-    def load_default_heating_settings():
+    def load_default_timer_settings():
         logging.info("fallback to default settings")
         try:
             from timer_settings import DEFAULT_TIMER_SETTINGS
@@ -163,7 +183,20 @@ class State:
         return {}
 
     @staticmethod
-    def _save_heating_settings(setting, setting_file=HEATING_SETTINGS_FILE):
+    def load_default_main_settings():
+        null_setting = {'THRESHOLD': 0,
+                         'MAIN_SENSOR': None}
+        logging.info("fallback to default settings")
+        try:
+            from main_settings import MAIN_SETTINGS
+            return MAIN_SETTINGS
+        except ImportError:
+            pass
+            logging.error("couldn't import timer_settings module, can't load default timer settings")
+        return null_setting
+
+    @staticmethod
+    def _save_settings(setting, setting_file=HEATING_SETTING_FILE):
         try:
             with open(setting_file, 'wb') as file:
                 pickle.dump(setting, file, protocol=pickle.HIGHEST_PROTOCOL)

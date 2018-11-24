@@ -7,7 +7,7 @@ from flask_cors import CORS
 import server
 from errors import *
 from forceheating import ForceHeating
-from settings import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL, \
+from properties import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL, \
     HTTP_OK
 from utils import add_headers, validate_req
 
@@ -34,18 +34,30 @@ def get_weather():
 
 
 @app.route("/sys-info", methods=['GET'])
-def get_settings():
+def get_sys_info():
+    logging.info(request.args)
+    logging.debug(request)
     return add_headers("OK", HTTP_OK)
 
 
 @app.route("/settings", methods=['GET'])
 def get_settings():
-    return add_headers("OK", HTTP_OK)
+    logging.info(request.args)
+    logging.debug(request)
+    settings = server.get_main_settings()
+    return add_headers(settings, HTTP_OK)
 
 
 @app.route("/settings", methods=['POST'])
 def post_settings():
-    return add_headers("OK", HTTP_OK)
+    logging.info(request.args)
+    logging.debug(request)
+    fields = list(server.get_main_settings().keys())
+    if not validate_req(request, fields):
+        logging.error(JSON_ERROR)
+        return add_headers(JSON_ERROR, JSON_ERROR['code'])
+    server.change_main_setting(request.json)
+    return add_headers(request.json, HTTP_OK)
 
 
 @app.route("/heating-settings", methods=['GET'])

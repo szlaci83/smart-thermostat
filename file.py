@@ -1,7 +1,7 @@
 '''
 Mock DB using file output.
 '''
-from settings import *
+from properties import *
 
 
 class DatabaseManager:
