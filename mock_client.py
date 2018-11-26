@@ -15,8 +15,8 @@ from properties import *
 client = mqtt.Client()
 
 data = {
-    'client_id': 46,
-    'location': 'mock_location1'
+    'client_id': 465,
+    'location': 'mock_location2'
 }
 
 while True:

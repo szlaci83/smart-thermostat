@@ -3,6 +3,7 @@ import threading
 
 from flask import Flask, request
 from flask_cors import CORS
+import copy
 
 import server
 from errors import *
@@ -16,28 +17,28 @@ CORS(app)
 
 
 @app.route("/state", methods=['GET'])
-def get_status():
+def get_state():
     logging.info(request.args)
     logging.debug(request)
-    status = server.current_state.get_json_repr()
-    logging.info(status)
-    return add_headers(status, HTTP_OK)
+    state = server.current_state.get_json_repr()
+    logging.info(state)
+    return add_headers(state, HTTP_OK)
 
 
 @app.route("/detailed-weather", methods=['GET'])
 def get_weather():
     logging.info(request.args)
     logging.debug(request)
-    status = server.current_state.weather_data
-    logging.info(status)
-    return add_headers(status, HTTP_OK)
+    weather = server.current_state.weather_data
+    logging.info(weather)
+    return add_headers(weather, HTTP_OK)
 
 
 @app.route("/sys-info", methods=['GET'])
 def get_sys_info():
     logging.info(request.args)
     logging.debug(request)
-    return add_headers("OK", HTTP_OK)
+    return add_headers({"status": "Future use"}, HTTP_OK)
 
 
 @app.route("/settings", methods=['GET'])
@@ -52,12 +53,14 @@ def get_settings():
 def post_settings():
     logging.info(request.args)
     logging.debug(request)
-    fields = list(server.get_main_settings().keys())
-    if not validate_req(request, fields):
+    current_settings_fields = list(server.get_main_settings().keys())
+    if not validate_req(request, current_settings_fields):
         logging.error(JSON_ERROR)
         return add_headers(JSON_ERROR, JSON_ERROR['code'])
     server.change_main_setting(request.json)
-    return add_headers(request.json, HTTP_OK)
+    res = copy.copy(request.json)
+    res["status"] = "changed settings"
+    return add_headers(res, HTTP_OK)
 
 
 @app.route("/heating-settings", methods=['GET'])
@@ -93,7 +96,7 @@ def post_heating_settings():
         return add_headers(JSON_ERROR, JSON_ERROR['code'])
     setting = request.json
     server.change_timer_setting(**setting)
-    return add_headers(True, HTTP_OK)
+    return add_headers({"status": "changed heating settings"}, HTTP_OK)
 
 
 @app.route("/switch-heating", methods=['POST'])
@@ -105,7 +108,7 @@ def switch_heating():
     server.forced_switch(heating, period=force_minutes)
     result = "Forcing heating: %s for %d minute(s)" % (heating, force_minutes)
     logging.debug(result)
-    return add_headers(result, HTTP_OK)
+    return add_headers({"status": str(result)}, HTTP_OK)
 
 
 if __name__ == '__main__':

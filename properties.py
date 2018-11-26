@@ -47,7 +47,6 @@ HEATING = False
 QUEUE_SIZE = 5  # queue size for smoothing
 # 1 Hour (it will be multiplied by 60 again)
 FORCE_ON_DEFAULT = 1 * 60
-TOLERANCE = 1
 TIMER_REFRESH = 5
 MAIN_SETTING_FILE = "main_settings.pickle"
 HEATING_SETTING_FILE = 'timer.pickle'

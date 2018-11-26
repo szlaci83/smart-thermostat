@@ -8,11 +8,11 @@ if not os.getegid() == 0:
 from pyA20.gpio import gpio
 from pyA20.gpio import port
 from pyA20.gpio import connector
-from status import Status
+from relay_status import RelayStatus
 
 
 global STATUS
-STATUS = Status.OFF
+STATUS = RelayStatus.OFF
 
 __led = connector.LEDp2
 __HEATING_PIN = __led # TODO: specify the heating PIN, it will switch the inbuilt LED for now.
@@ -25,7 +25,7 @@ gpio.setcfg(__HEATING_PIN, gpio.OUTPUT)
 
 def off(pin=__HEATING_PIN, led=False):
     global STATUS
-    STATUS = Status.OFF.value
+    STATUS = RelayStatus.OFF.value
     gpio.output(pin, 0)
     if led:
         turn_led_on()
@@ -33,7 +33,7 @@ def off(pin=__HEATING_PIN, led=False):
 
 def on(pin=__HEATING_PIN, led=False):
     global STATUS
-    STATUS = Status.ON.value
+    STATUS = RelayStatus.ON.value
     gpio.output(pin, 1)
     if led:
         turn_led_on()

@@ -66,7 +66,7 @@ def forced_switch(switch_setting, period):
 
 def apply_setting():
     # TODO: save current_state into its own table if there is change
-    logging.debug("current temperature: %d" % current_state.get_temperature())
+    logging.debug("current temperature: %s" % current_state.get_temperature())
     HEATING_RELAY.on(led=True) if current_state.is_HEATING else HEATING_RELAY.off(led=True)
 
 
@@ -81,8 +81,8 @@ def reading_worker():
             location = results['location']
             current_state.add_reading(location, results['humidity'], results['temp'])
 
-            if ((old_state.get_humidity(sensor=location) != current_state.get_humidity(sensor=location)) or
-                    (old_state.get_temperature(sensor=location) != current_state.get_temperature(sensor=location))):
+            if ((old_state.get_humidity(sensor_name=location) != current_state.get_humidity(sensor_name=location)) or
+                    (old_state.get_temperature(sensor_name=location) != current_state.get_temperature(sensor_name=location))):
                 results['heating'] = current_state.is_HEATING
                 if not DEV:
                     db.put(table_name=location, data=results)
