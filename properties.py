@@ -31,7 +31,6 @@ TOPIC = "topic/temperature"
 # DB
 TABLE_NAME = 'temp_test'
 MOCK_FILE = 'db.csv'
-HEATING_SETTINGS_FILE = 'timer.pickle'
 READING_PK = {'name': 'client_id', 'key_type': 'HASH', 'type': 'N'}
 READING_SK = {'name': 'epoch', 'key_type': 'RANGE', 'type': 'S'}
 STATE_TABLE = "state"
@@ -48,13 +47,9 @@ HEATING = False
 QUEUE_SIZE = 5  # queue size for smoothing
 # 1 Hour (it will be multiplied by 60 again)
 FORCE_ON_DEFAULT = 1 * 60
-TOLERANCE = 1
 TIMER_REFRESH = 5
-
-#Switchable settings:
-THRESHOLD = 0.8
-MAIN_SENSOR = 'mock_location1'
-
+MAIN_SETTING_FILE = "main_settings.pickle"
+HEATING_SETTING_FILE = 'timer.pickle'
 
 # Weather API settings
 WEATHER_QUERY = "http://api.openweathermap.org/data/2.5/weather?units=metric&id=%s&APPID=%s"

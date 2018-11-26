@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import copy
-import logging
 import threading
 import time
 from multiprocessing import Queue
@@ -10,7 +9,7 @@ import paho.mqtt.client as mqtt
 import mock_relay as HEATING_RELAY
 from db import *
 from forceheating import ForceHeating
-from settings import *
+from properties import *
 from state import State
 from utils import *
 
@@ -67,7 +66,7 @@ def forced_switch(switch_setting, period):
 
 def apply_setting():
     # TODO: save current_state into its own table if there is change
-    logging.debug("current temperature: %d" % current_state.get_temperature())
+    logging.debug("current temperature: %s" % current_state.get_temperature())
     HEATING_RELAY.on(led=True) if current_state.is_HEATING else HEATING_RELAY.off(led=True)
 
 
@@ -82,8 +81,8 @@ def reading_worker():
             location = results['location']
             current_state.add_reading(location, results['humidity'], results['temp'])
 
-            if ((old_state.get_humidity(sensor=location) != current_state.get_humidity(sensor=location)) or
-                    (old_state.get_temperature(sensor=location) != current_state.get_temperature(sensor=location))):
+            if ((old_state.get_humidity(sensor_name=location) != current_state.get_humidity(sensor_name=location)) or
+                    (old_state.get_temperature(sensor_name=location) != current_state.get_temperature(sensor_name=location))):
                 results['heating'] = current_state.is_HEATING
                 if not DEV:
                     db.put(table_name=location, data=results)
@@ -97,11 +96,20 @@ def reading_worker():
 def change_timer_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
     old_state = copy.deepcopy(current_state)
     logging.debug("old state: %s" % old_state)
-    current_state.change_setting(day, start_hour, start_min, end_hour, end_min, desired_temp)
+    current_state.change_heating_setting(day, start_hour, start_min, end_hour, end_min, desired_temp)
     if old_state != current_state:
         logging.debug("saving new state: %s" % current_state)
         if not DEV:
             db.put(table_name=STATE_TABLE, data=current_state.get_db_repr(), partition_key=STATE_PK, sort_key=STATE_SK)
+
+
+def change_main_setting(settings):
+    current_state.change_main_setting(settings)
+
+
+def get_main_settings():
+    return current_state.get_main_settings()
+
 
 def run():
     client = mqtt.Client()

@@ -6,7 +6,7 @@ import datetime
 import time
 import pickle
 
-from settings import TOLERANCE, MAIN_SENSOR, WEATHER_QUERY, JSON_HEADER, THRESHOLD, HEATING_SETTINGS_FILE, QUEUE_SIZE
+from properties import WEATHER_QUERY, JSON_HEADER, HEATING_SETTING_FILE, QUEUE_SIZE, MAIN_SETTING_FILE
 from credentials import API_KEY, CITY_ID
 
 logging.basicConfig(filename="", level=logging.DEBUG, format="%(asctime)s:%(levelname)s:%(message)s")
@@ -17,24 +17,51 @@ class State:
         self.humidities = {}
         self.temperatures = {}
         self.weather_data = {}
-        self.TIMER_SETTINGS = self.load_heating_settings_from_file()
+        self.TIMER_SETTINGS = self.load_settings_from_file()
+        self.settings = self.load_settings_from_file(setting_file=MAIN_SETTING_FILE)
         self.HEATING = False
         self.force_heating = ForceHeating.UNSET
         self.refresh_weather_data()
 
-    def get_humidity(self, sensor=MAIN_SENSOR):
+    def get_humidities(self):
+        return self._dict_avg(self.humidities)
+
+    def get_humidity(self, sensor_name='MAIN_SENSOR'):
         try:
-            humidity = self._normalise_list(self.humidities[sensor]) if sensor else self._normalise_dict(self.humidities)
+            sensor = self.settings[sensor_name]
         except KeyError:
+            sensor = None
+        try:
+            if sensor:
+                humidity = self._list_avg(self.humidities[sensor])
+            else:
+                humidities = self.get_humidities().values()
+                humidity = sum(humidities) / len(humidities)
+        except (KeyError, ZeroDivisionError):
             humidity = 0
         return humidity
 
-    def get_temperature(self, sensor=MAIN_SENSOR):
+    def get_temperatures(self):
+        return self._dict_avg(self.temperatures)
+
+    def get_temperature(self, sensor_name='MAIN_SENSOR'):
+        logging.debug("TEMPS" + str(self.temperatures))
         try:
-            temperature = self._normalise_list(self.temperatures[sensor]) if sensor else self._normalise_dict(self.temperatures)
+            sensor = self.settings[sensor_name]
         except KeyError:
+            sensor = None
+        try:
+            if sensor:
+                temperature = self._list_avg(self.temperatures[sensor])
+            else:
+                temperatures = self.get_temperatures().values()
+                temperature = sum(temperatures) / len(temperatures)
+        except (KeyError, ZeroDivisionError):
             temperature = 0
         return temperature
+
+    def get_main_settings(self):
+        return self.settings
 
     @property
     def humidity_out(self):
@@ -70,43 +97,50 @@ class State:
 
     @property
     def is_HEATING(self):
-        logging.debug("current temp: %d" % self.get_temperature())
+        logging.debug("current temp: %s" % self.get_temperature())
 
         if self.force_heating.value is not None:
             logging.debug("forcing %s: " % self.force_heating.value)
             return self.force_heating.value
         else:
             logging.debug("checking heating")
-            if self.get_temperature() <= self.desired_temperature - THRESHOLD:
+            if self.get_temperature() <= self.desired_temperature - self.settings['HEAT_THRESHOLD']:
                 logging.debug("HEATING: %s" % True)
                 return True
             else:
-                if self.get_temperature() >= self.desired_temperature + THRESHOLD:
+                if self.get_temperature() >= self.desired_temperature + self.settings['HEAT_THRESHOLD']:
                     logging.debug("HEATING: %s" % False)
                     return False
 
     @staticmethod
-    def _normalise_list(values_list, tolerance=TOLERANCE):
-        # smoothing outliers (ignore readings outside tolerance)
-        if abs(values_list[0] - values_list[1]) > tolerance and abs(values_list[1] - values_list[2]) > tolerance:
-            values_list[1] = values_list[0]
-        return sum(values_list) / QUEUE_SIZE
+    def _list_avg(values):
+        values_list = list(values)
+        return sum(values_list) / len(values_list)
 
-    def _normalise_dict(self, target_dict):
+    def _dict_avg(self, target_dict):
         norm_dict = {}
         for k, v in target_dict.items():
-            norm_dict[k] = self._normalise_list(v)
+            norm_dict[k] = self._list_avg(v)
         return norm_dict
+
+    @staticmethod
+    def is_outlier(elements, value, tolerance):
+        element_list = list(elements)
+        return value - element_list[0] > tolerance
 
     def add_reading(self, location, humidity, temperature):
         try:
-            self.humidities[location].appendleft(humidity)
+            if not self.is_outlier(self.humidities[location], humidity, self.settings['HUM_TOLERANCE']):
+                self.humidities[location].appendleft(humidity)
         except KeyError:
             self.humidities[location] = collections.deque(QUEUE_SIZE * [humidity], QUEUE_SIZE)
         try:
-            self.temperatures[location].appendleft(temperature)
+            if not self.is_outlier(self.temperatures[location], temperature, self.settings['TEMP_TOLERANCE']):
+                self.temperatures[location].appendleft(temperature)
         except KeyError:
             self.temperatures[location] = collections.deque(QUEUE_SIZE * [temperature], QUEUE_SIZE)
+        logging.debug(str(self.temperatures))
+        logging.debug(str(self.humidities))
 
     def refresh_weather_data(self):
         query = WEATHER_QUERY % (str(CITY_ID), API_KEY)
@@ -118,7 +152,7 @@ class State:
         logging.debug("WeatherAPI temp: %d" % self.weather_data['main']['temp'])
         logging.debug("WeatherAPI humidity: %d" % self.weather_data['main']['humidity'])
 
-    def change_setting(self, day, start_hour, start_min, end_hour, end_min, desired_temp):
+    def change_heating_setting(self, day, start_hour, start_min, end_hour, end_min, desired_temp):
         logging.debug("changing setting: %s - %d:%d -> %d:%d = %dC" % (
         day, start_hour, start_min, end_hour, end_min, desired_temp))
         hour = start_hour
@@ -138,21 +172,29 @@ class State:
         except IndexError:
             logging.error(
                 "Wrong hour or minute: h: %d, min: %d, h:%d, min: %d" % (start_hour, start_min, end_hour, end_min))
-        self._save_heating_settings(setting=self.TIMER_SETTINGS)
+        self._save_settings(setting=self.TIMER_SETTINGS)
         return
 
-    def load_heating_settings_from_file(self, setting_file=HEATING_SETTINGS_FILE):
+    def change_main_setting(self, settings):
+        self._save_settings(settings, setting_file=MAIN_SETTING_FILE)
+        self.settings = settings
+        return
+
+    def load_settings_from_file(self, setting_file=HEATING_SETTING_FILE):
         try:
             with open(setting_file, 'rb') as handle:
                 settings = pickle.load(handle)
         except FileNotFoundError or IOError:
             logging.error("error while loading timer settings from: %s" % setting_file)
-            settings = self.load_default_heating_settings()
+            if setting_file == HEATING_SETTING_FILE:
+                settings = self.load_default_timer_settings(setting_file)
+            if setting_file == MAIN_SETTING_FILE:
+                settings = self.load_default_main_settings()
         logging.info("heating settings loaded from %s" % setting_file)
         return settings
 
     @staticmethod
-    def load_default_heating_settings():
+    def load_default_timer_settings():
         logging.info("fallback to default settings")
         try:
             from timer_settings import DEFAULT_TIMER_SETTINGS
@@ -163,7 +205,20 @@ class State:
         return {}
 
     @staticmethod
-    def _save_heating_settings(setting, setting_file=HEATING_SETTINGS_FILE):
+    def load_default_main_settings():
+        null_setting = {'THRESHOLD': 0,
+                         'MAIN_SENSOR': None}
+        logging.info("fallback to default settings")
+        try:
+            from main_settings import MAIN_SETTINGS
+            return MAIN_SETTINGS
+        except ImportError:
+            pass
+            logging.error("couldn't import timer_settings module, can't load default timer settings")
+        return null_setting
+
+    @staticmethod
+    def _save_settings(setting, setting_file=HEATING_SETTING_FILE):
         try:
             with open(setting_file, 'wb') as file:
                 pickle.dump(setting, file, protocol=pickle.HIGHEST_PROTOCOL)
@@ -195,7 +250,9 @@ class State:
                self.force_heating != other.force_heating
 
     def get_json_repr(self):
-        return {"humidity": self.get_humidity(),
+        return {"humidities": self.get_humidities(),
+                "temperatures": self.get_temperatures(),
+                "humidity": self.get_humidity(),
                 "temperature": self.get_temperature(),
                 "heating": self.is_HEATING,
                 "desired_temperature": self.desired_temperature,
@@ -206,7 +263,9 @@ class State:
                 }
 
     def get_db_repr(self):
-        return {"humidity": str(self.get_humidity()),
+        return {"humidities": str(self.get_humidities()),
+                "temperatures": str(self.get_temperatures()),
+                "humidity": str(self.get_humidity()),
                 "temperature": str(self.get_temperature()),
                 "heating": 1 if self.is_HEATING else 0,
                 "desired_temperature": str(self.desired_temperature),

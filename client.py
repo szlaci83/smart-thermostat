@@ -8,7 +8,7 @@ import dht22
 import time
 import json
 
-from settings import *
+from properties import *
 
 # https://github.com/ionutpi/DHT22-Python-library-Orange-PI/blob/master/README.md
 
