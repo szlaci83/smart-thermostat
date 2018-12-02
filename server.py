@@ -41,7 +41,6 @@ def weather_worker():
     logging.debug("new state: %s" % current_state)
     if old_state != current_state:
         logging.debug("saving new state: %s" % current_state)
-        # TODO save to DB
     time.sleep(WEATHER_REFRESH)
 
 
@@ -65,8 +64,6 @@ def forced_switch(switch_setting, period):
 
 
 def apply_setting():
-    # TODO: save current_state into its own table if there is change
-    logging.debug("current temperature: %s" % current_state.get_temperature())
     HEATING_RELAY.on(led=True) if current_state.is_HEATING else HEATING_RELAY.off(led=True)
 
 
@@ -80,7 +77,6 @@ def reading_worker():
             logging.debug("old state: %s" % old_state)
             location = results['location']
             current_state.add_reading(location, results['humidity'], results['temp'])
-
             if ((old_state.get_humidity(sensor_name=location) != current_state.get_humidity(sensor_name=location)) or
                     (old_state.get_temperature(sensor_name=location) != current_state.get_temperature(sensor_name=location))):
                 results['heating'] = current_state.is_HEATING
@@ -94,13 +90,8 @@ def reading_worker():
 
 
 def change_timer_setting(day, start_hour, start_min, end_hour, end_min, desired_temp):
-    old_state = copy.deepcopy(current_state)
-    logging.debug("old state: %s" % old_state)
+    logging.debug("changing_timer_setting called")
     current_state.change_heating_setting(day, start_hour, start_min, end_hour, end_min, desired_temp)
-    if old_state != current_state:
-        logging.debug("saving new state: %s" % current_state)
-        if not DEV:
-            db.put(table_name=STATE_TABLE, data=current_state.get_db_repr(), partition_key=STATE_PK, sort_key=STATE_SK)
 
 
 def change_main_setting(settings):
