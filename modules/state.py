@@ -1,12 +1,13 @@
-from forceheating import ForceHeating
+from helpers.forceheating import ForceHeating
 import collections
 import requests
 import logging
 import datetime
 import time
 import pickle
+import os
 
-from properties import WEATHER_QUERY, JSON_HEADER, HEATING_SETTING_FILE, QUEUE_SIZE, MAIN_SETTING_FILE
+from properties import WEATHER_QUERY, JSON_HEADER, HEATING_SETTING_FILE, QUEUE_SIZE, MAIN_SETTING_FILE, RESOURCE_FOLDER
 from credentials import API_KEY, CITY_ID
 
 logging.basicConfig(filename="", level=logging.DEBUG, format="%(asctime)s:%(levelname)s:%(message)s")
@@ -180,24 +181,24 @@ class State:
         self.settings = settings
         return
 
-    def load_settings_from_file(self, setting_file=HEATING_SETTING_FILE):
+    def load_settings_from_file(self, setting_file=HEATING_SETTING_FILE, resource_folder=RESOURCE_FOLDER):
         try:
-            with open(setting_file, 'rb') as handle:
+            with open(os.path.join(RESOURCE_FOLDER, setting_file), 'rb') as handle:
                 settings = pickle.load(handle)
         except FileNotFoundError or IOError:
-            logging.error("error while loading timer settings from: %s" % setting_file)
+            logging.error("error while loading settings %s/%s" % (resource_folder, setting_file))
             if setting_file == HEATING_SETTING_FILE:
-                settings = self.load_default_timer_settings(setting_file)
+                settings = self.load_default_timer_settings(os.path.join("resources", "main_settings"))
             if setting_file == MAIN_SETTING_FILE:
                 settings = self.load_default_main_settings()
-        logging.info("heating settings loaded from %s" % setting_file)
+        logging.info("settings loaded from %s/%s" % (resource_folder, setting_file))
         return settings
 
     @staticmethod
     def load_default_timer_settings():
         logging.info("fallback to default settings")
         try:
-            from timer_settings import DEFAULT_TIMER_SETTINGS
+            from helpers.timer_settings import DEFAULT_TIMER_SETTINGS
             return DEFAULT_TIMER_SETTINGS
         except ImportError:
             pass
@@ -210,7 +211,7 @@ class State:
                          'MAIN_SENSOR': None}
         logging.info("fallback to default settings")
         try:
-            from main_settings import MAIN_SETTINGS
+            from helpers.main_settings import MAIN_SETTINGS
             return MAIN_SETTINGS
         except ImportError:
             pass
@@ -218,12 +219,12 @@ class State:
         return null_setting
 
     @staticmethod
-    def _save_settings(setting, setting_file=HEATING_SETTING_FILE):
+    def _save_settings(setting, setting_file=HEATING_SETTING_FILE, resource_folder=RESOURCE_FOLDER):
         try:
             with open(setting_file, 'wb') as file:
-                pickle.dump(setting, file, protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(setting, os.path.join(resource_folder, setting_file), protocol=pickle.HIGHEST_PROTOCOL)
         except FileNotFoundError or IOError:
-            logging.error("error while saving timer settings to: %s" % setting_file)
+            logging.error("error while saving timer settings to: %s/%s" % (RESOURCE_FOLDER, setting_file))
             return False
         logging.info("heating settings saved to %s" % setting_file)
         return True

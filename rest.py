@@ -6,11 +6,11 @@ from flask_cors import CORS
 import copy
 
 import server
-from errors import *
-from forceheating import ForceHeating
+from helpers.errors import *
+from helpers.forceheating import ForceHeating
 from properties import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL, \
     HTTP_OK
-from utils import add_headers, validate_req
+from helpers.utils import add_headers, validate_req
 
 app = Flask(__name__)
 CORS(app)

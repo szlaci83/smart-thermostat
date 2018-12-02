@@ -1,3 +1,6 @@
+from properties import RESOURCE_FOLDER
+import os
+
 DEFAULT_TIMER_SETTINGS = {"Monday": [[20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20],
                                      [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20],
                                      [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20], [20, 20, 20, 20],
@@ -41,6 +44,6 @@ DEFAULT_TIMER_SETTINGS = {"Monday": [[20, 20, 20, 20], [20, 20, 20, 20], [20, 20
 
 
 if __name__ == '__main__':
-    from utils import pickle_it
-    pickle_it(DEFAULT_TIMER_SETTINGS, "timer")
+    from helpers.utils import pickle_it
+    pickle_it(DEFAULT_TIMER_SETTINGS, os.path.join(RESOURCE_FOLDER, "timer"))
 

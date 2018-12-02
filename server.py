@@ -6,12 +6,12 @@ from multiprocessing import Queue
 
 import paho.mqtt.client as mqtt
 
-import mock_relay as HEATING_RELAY
-from db import *
-from forceheating import ForceHeating
+from mock import mock_relay as HEATING_RELAY
+from modules.db import *
+from helpers.forceheating import ForceHeating
 from properties import *
-from state import State
-from utils import *
+from modules.state import State
+from helpers.utils import *
 
 db = DatabaseManager()
 current_state = State()

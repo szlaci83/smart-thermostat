@@ -6,9 +6,8 @@ if not os.getegid() == 0:
     sys.exit('Script must be run as root')
 
 from pyA20.gpio import gpio
-from pyA20.gpio import port
 from pyA20.gpio import connector
-from relay_status import RelayStatus
+from helpers.relay_status import RelayStatus
 
 
 global STATUS
