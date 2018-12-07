@@ -1,0 +1,16 @@
+mock:
+  db: False
+  relay: False
+
+server:
+  host: localhost
+  mqtt-port: 1883
+  rest-port: 8887
+  timeout: 60
+
+client:
+  host: localhost
+  mqtt-port: 1883
+  timeout: 60
+
+topic: topic/temperature

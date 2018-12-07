@@ -7,12 +7,22 @@ from multiprocessing import Queue
 
 import paho.mqtt.client as mqtt
 
-import mock_relay as HEATING_RELAY
-from db import DatabaseManager
+from properties import WEATHER_REFRESH, TIMER_REFRESH, STATE_SK, STATE_PK, STATE_TABLE, TOPIC, USE_ENV, BANNER, \
+    SERVER_MQTT_PORT, SERVER_HOST, SERVER_TIMEOUT, SERVER_LOG, LOGGING_LEVEL, IS_MOCK_RELAY, IS_MOCK_DB
 from forceheating import ForceHeating
-from properties import WEATHER_REFRESH, TIMER_REFRESH, STATE_SK, STATE_PK, STATE_TABLE, TOPIC, ENV, BANNER, SERVER_MQTT_PORT, SERVER_HOST, SERVER_TIMEOUT, SERVER_LOG, LOGGING_LEVEL
+
 from state import State
 from utils import *
+
+if IS_MOCK_RELAY:
+    import mock_relay as HEATING_RELAY
+else:
+    import relay_controller as HEATING_RELAY
+
+if IS_MOCK_DB:
+    from mock_db import DatabaseManager
+else:
+    from db import DatabaseManager
 
 db = DatabaseManager()
 current_state = State()
@@ -81,12 +91,12 @@ def reading_worker():
             if ((old_state.get_humidity(sensor_name=location) != current_state.get_humidity(sensor_name=location)) or
                     (old_state.get_temperature(sensor_name=location) != current_state.get_temperature(sensor_name=location))):
                 results['heating'] = current_state.is_HEATING
-                if not ENV == "dev":
+                if not USE_ENV == "dev":
                     db.put(table_name=location, data=results)
             logging.debug("current state: %s" % current_state)
             if old_state != current_state:
                 logging.debug("saving new state: %s" % current_state)
-                if not ENV == "dev":
+                if not USE_ENV == "dev":
                     db.put(table_name=STATE_TABLE, data=current_state.get_db_repr(), partition_key=STATE_PK, sort_key=STATE_SK)
 
 
@@ -124,7 +134,7 @@ def run():
 
 if __name__ == '__main__':
     print(BANNER)
-    print("Using environment: %s" % ENV)
+    print("Using environment: %s" % USE_ENV)
     print("Server started see %s for details!" % SERVER_LOG)
     print("MQTT port: %d" % SERVER_MQTT_PORT)
     if SERVER_LOG and SERVER_LOG != '':

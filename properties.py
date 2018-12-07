@@ -2,7 +2,7 @@
 import logging
 from utils import load_settings_from_yml
 
-ENV = "dev"
+USE_ENV = "dev"
 
 BANNER = "____ _  _ ____ ____ ___    ___ _  _ ____ ____ _  _ ____ ____ ___ ____ ___    \n" \
              "[__  |\/| |__| |__/  |  __  |  |__| |___ |__/ |\/| |  | [__   |  |__|  |     \n" \
@@ -43,10 +43,10 @@ HTTP_OK = 200
 
 #------------------------------------------------------------------------------------
 # REST IS LOADED DYNAMICALLY ACCORDING TO ENV
-yml_settings = load_settings_from_yml(ENV + ".yml")
+yml_settings = load_settings_from_yml("env-" + USE_ENV + ".yml")
 
-MOCK_DB = yml_settings['mock']['db']
-MOCK_RELAY = yml_settings['mock']['relay']
+IS_MOCK_DB = yml_settings['mock']['db']
+IS_MOCK_RELAY = yml_settings['mock']['relay']
 
 # SERVER
 SERVER_HOST = yml_settings['server']['host']
