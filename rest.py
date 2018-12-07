@@ -9,7 +9,7 @@ import server
 from errors import *
 from forceheating import ForceHeating
 from properties import FORCE_ON_DEFAULT, SERVER_REST_PORT, SERVER_HOST, SERVER_LOG, SERVER_MQTT_PORT, LOGGING_LEVEL, \
-    HTTP_OK
+    HTTP_OK, BANNER
 from utils import add_headers, validate_req
 
 app = Flask(__name__)
@@ -112,11 +112,12 @@ def switch_heating():
 
 
 if __name__ == '__main__':
+    print(BANNER)
+    print("Server started see %s for details!" % SERVER_LOG)
+    print("MQTT port: %d" % SERVER_MQTT_PORT)
+    print("REST API port: %d" % SERVER_REST_PORT)
     if SERVER_LOG and SERVER_LOG != '':
-        print("Server started see %s for details!" % SERVER_LOG)
-        print("MQTT port: %d" % SERVER_MQTT_PORT)
-        print("REST API port: %d" % SERVER_REST_PORT)
-    logging.basicConfig(filename=SERVER_LOG, level=LOGGING_LEVEL, format="%(asctime)s:%(levelname)s:%(message)s")
+        logging.basicConfig(filename=SERVER_LOG, level=LOGGING_LEVEL, format="%(asctime)s:%(levelname)s:%(message)s")
 
     server_thread = threading.Thread(target=server.run)
     server_thread.start()

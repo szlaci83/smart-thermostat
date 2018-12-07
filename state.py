@@ -5,6 +5,7 @@ import logging
 import datetime
 import time
 import pickle
+import os
 
 from properties import WEATHER_QUERY, JSON_HEADER, HEATING_SETTING_FILE, QUEUE_SIZE, MAIN_SETTING_FILE
 from credentials import API_KEY, CITY_ID
@@ -182,6 +183,7 @@ class State:
 
     def load_settings_from_file(self, setting_file=HEATING_SETTING_FILE):
         try:
+            setting_file = os.path.join("resources", setting_file)
             with open(setting_file, 'rb') as handle:
                 settings = pickle.load(handle)
         except FileNotFoundError or IOError:
