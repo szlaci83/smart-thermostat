@@ -4,7 +4,9 @@ OrangePI is the server, responsible for:
  - aggregating and recording data (temperature, humidity, heating) to AWS Dynamo DB
  - Storing and managing thermostat settings and timer functionality
  - Switching a relay to turn on/off the heating
- 
+
+Read more here:
+https://medium.com/@laszloszoboszlai/building-an-iot-smart-thermostat-f57a1d54e65e
 
 
 # OLD VERSION ONLY BASED ON ARDUINO:
